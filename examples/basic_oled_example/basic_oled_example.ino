@@ -510,7 +510,7 @@ unsigned long getGpsTimeInMilliseconds() {
           if (gps->fixquality > 0) {
             float altitude = 50; // gps->altitude // flat earth for testing
             // must update odometer every refresh (ONLY WHEN FIX VALID)
-            lapTimer.updateOdometer(gps->latitudeDegrees, gps->longitudeDegrees, gps->altitude);
+            lapTimer.updateOdometer(gps->latitudeDegrees, gps->longitudeDegrees, altitude);
             // check if we are crossing start/finish line (ONLY WHEN FIX VALID)
             lapTimer.checkStartFinish(gps->latitudeDegrees, gps->longitudeDegrees);
           }
