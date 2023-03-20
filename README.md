@@ -115,7 +115,7 @@ Now if you want any running information,  you have the following...
 This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.org/wiki/MIT_License).
 
 ## More features?
-If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone.
+If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone, or log it and send it after the race.
 
 Paid version required for DIY loggers and importing NMEA logs, worth every penny.
 
