@@ -1,24 +1,9 @@
 /**
- * @file DovesLapTimer.cpp
- * @author Michael Champagne (CrimsonDove) + chatGPT4
- * @version 1.0
- * @date 2023-03-19
- * 
- * @brief This library offers a basic laptiming service based around GPS data, intended to use for gokarting.
- * 
- * Intended to use for gokarting this library offers a simple way to get basic lap timing information from a GPS based system.
+ * Originally intended to use for gokarting this library offers a simple way to get basic lap timing information from a GPS based system.
  * This library does NOT interface with your GPS, simply feed it data and check the state.
  * Right now this only offers a single split time around the "start/finish" and would not work for many other purposes without modification.
  * 
- * The development of this library has been overseen, and all docblocks have been generated using chatGPT4.
- * 
- * Copyright (c) 2023 Michael Champagne. All rights reserved.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * The development of this library has been overseen, and all documentation has been generated using chatGPT4.
  */
 
 #include "DovesLapTimer.h"
@@ -84,7 +69,7 @@ void DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   }
 
   if (crossing) {
-    // Check if we've moved out of the threshold area plus a crossingPointBuffer distance
+    // Check if we've moved out of the threshold area
     if (distToLine > crossingThreshold) {
       debugln("probably crossed, lets calculate");
       crossing = false;
@@ -150,11 +135,11 @@ void DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
 
       crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-      if (crossingPointBufferIndex == 0) { // this seems janky
+      if (crossingPointBufferIndex == 0) {
         crossingPointBufferFull = true;
       }
 
-      debug("Not crossing yet, add to crossingPointBuffer: index[");
+      debug("crossing = true, add to crossingPointBuffer: index[");
       debug(crossingPointBufferIndex);
       debug("] full[");
       debug(crossingPointBufferFull == true ? "True" : "False");
@@ -168,7 +153,7 @@ void DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   }
 }
 
-// dont think im using this anymore...
+// dont think were using this anymore... might be a useful util to leave in
 double DovesLapTimer::angleBetweenVectors(double vector1X, double vector1Y, double vector2X, double vector2Y) {
   // Calculate the dot product of the two vectors
   double dotProduct = vector1X * vector2X + vector1Y * vector2Y;
@@ -211,6 +196,7 @@ bool DovesLapTimer::isDriverNearLine(double driverLat, double driverLng, double 
   double driverDistA = haversine(driverLat, driverLng, pointALat, pointALng);
   double driverDistB = haversine(driverLat, driverLng, pointBLat, pointBLng);
   double lineLength = haversine(pointALat, pointALng, pointBLat, pointBLng);
+
   // Check if both the distances from the driver to the endpoints are shorter than the length of the line
   return (driverDistA < lineLength) && (driverDistB < lineLength);
 }
@@ -273,8 +259,7 @@ double DovesLapTimer::haversine(double lat1, double lon1, double lat2, double lo
   double deltaLon = lon2Rad - lon1Rad;
 
   // Calculate the Haversine formula components
-  double a = pow(sin(deltaLat / 2), 2) +
-             cos(lat1Rad) * cos(lat2Rad) * pow(sin(deltaLon / 2), 2);
+  double a = pow(sin(deltaLat / 2), 2) + cos(lat1Rad) * cos(lat2Rad) * pow(sin(deltaLon / 2), 2);
   double c = 2 * atan2(sqrt(a), sqrt(1 - a));
 
   // Calculate the great-circle distance
@@ -301,7 +286,8 @@ double DovesLapTimer::interpolateWeight(double distA, double distB, float speedA
 }
 
 #ifdef DOVES_LAP_TIMER_FORCE_LINEAR
-void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng) {
+void DovesLapTimer::interpolateCrossingPoint(
+  double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng) {
   int numPoints = crossingPointBufferFull ? crossingPointBufferSize : crossingPointBufferIndex;
 
   // Variables to store the best pair of points
@@ -324,19 +310,13 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
     debugln(sideB);
 
     // Update the best pair of points if the current pair has a smaller sum of distances and the points are on opposite sides of the line
-    // if (sumDistances < bestSumDistances && sideA != sideB) {
     if (sumDistances < bestSumDistances && sideA != sideB ) {
       bestSumDistances = sumDistances;
       bestIndexA = i;
       bestIndexB = i + 1;
 
-      // as soon as we cross the line i dont think we need anymore points...
+      // go ahead and exit as we have crossed the line
       break;
-
-      // // if one point is on the line just exit early
-      // if (sideA == 0 || sideB == 0) {
-      //   break;
-      // }
     }
   }
 
@@ -344,27 +324,26 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   double distA = pointLineSegmentDistance(crossingPointBuffer[bestIndexA].lat, crossingPointBuffer[bestIndexA].lng, pointALat, pointALng, pointBLat, pointBLng);
   double distB = pointLineSegmentDistance(crossingPointBuffer[bestIndexB].lat, crossingPointBuffer[bestIndexB].lng, pointALat, pointALng, pointBLat, pointBLng);
 
-  // Compute the interpolation factor based on distance
-  // double d = distA / (distA + distB);
   // Compute the interpolation factor based on distance and speed
-  double d = interpolateWeight(distA, distB, crossingPointBuffer[bestIndexA].speedKmh, crossingPointBuffer[bestIndexB].speedKmh);
-  crossingLat = crossingPointBuffer[bestIndexA].lat + d * (crossingPointBuffer[bestIndexB].lat - crossingPointBuffer[bestIndexA].lat);
-  crossingLng = crossingPointBuffer[bestIndexA].lng + d * (crossingPointBuffer[bestIndexB].lng - crossingPointBuffer[bestIndexA].lng);
-  crossingOdometer = crossingPointBuffer[bestIndexA].odometer + d * (crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer);
-  crossingTime = crossingPointBuffer[bestIndexA].time + d * (crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time);
+  double t = interpolateWeight(distA, distB, crossingPointBuffer[bestIndexA].speedKmh, crossingPointBuffer[bestIndexB].speedKmh);
+  crossingLat = crossingPointBuffer[bestIndexA].lat + t * (crossingPointBuffer[bestIndexB].lat - crossingPointBuffer[bestIndexA].lat);
+  crossingLng = crossingPointBuffer[bestIndexA].lng + t * (crossingPointBuffer[bestIndexB].lng - crossingPointBuffer[bestIndexA].lng);
+  crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * (crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer);
+  crossingTime = crossingPointBuffer[bestIndexA].time + t * (crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time);
 }
-#endif
-
-#ifndef DOVES_LAP_TIMER_FORCE_LINEAR
+#else
 double DovesLapTimer::catmullRom(double p0, double p1, double p2, double p3, double t) {
+  // Calculate t^2 and t^3
   double t2 = t * t;
   double t3 = t2 * t;
 
+  // Calculate the Catmull-Rom coefficients a, b, c, and d
   double a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
   double b = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3;
   double c = -0.5 * p0 + 0.5 * p2;
   double d = p1;
 
+  // Calculate and return the interpolated value using the coefficients and powers of t
   return a * t3 + b * t2 + c * t + d;
 }
 
@@ -385,8 +364,12 @@ void DovesLapTimer::interpolateCrossingPointOnCurve(double& crossingLat, double&
     int sideA = driverSideOfLine(crossingPointBuffer[i].lat, crossingPointBuffer[i].lng, pointALat, pointALng, pointBLat, pointBLng);
     int sideB = driverSideOfLine(crossingPointBuffer[i + 1].lat, crossingPointBuffer[i + 1].lng, pointALat, pointALng, pointBLat, pointBLng);
 
+    debug("sideA: ");
+    debug(sideA);
+    debug(" sideB: ");
+    debugln(sideB);
+
     // Update the best pair of points if the current pair has a smaller sum of distances and the points are on opposite sides of the line
-    // todo: how to break after doing one more
     if (sumDistances < bestSumDistances && sideA != sideB) {
       bestSumDistances = sumDistances;
       bestIndexA = i;
@@ -491,11 +474,8 @@ void DovesLapTimer::reset() {
   memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
 }
 unsigned long DovesLapTimer::getCurrentLapTime() const {
-  if (currentLapStartTime <= 0 || currentLapStartTime <= 0) {
-    return 0;
-  }
   // todo: midnight rollover??? maybe convert to unixStamp?
-  return millisecondsSinceMidnight - currentLapStartTime;
+  return currentLapStartTime <= 0 || raceStarted == false ? 0 : millisecondsSinceMidnight - currentLapStartTime;
 }
 float DovesLapTimer::getCurrentLapDistance() const {
   return currentLapOdometerStart == 0 || raceStarted == false ? 0 : totalDistanceTraveled - currentLapOdometerStart;

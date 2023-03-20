@@ -1,24 +1,9 @@
 /**
- * @file DovesLapTimer.h
- * @author Michael Champagne (CrimsonDove) + chatGPT4
- * @version 1.0
- * @date 2023-03-19
- * 
- * @brief This library offers a basic laptiming service based around GPS data, intended to use for gokarting.
- * 
- * Intended to use for gokarting this library offers a simple way to get basic lap timing information from a GPS based system.
+ * Originally intended to use for gokarting this library offers a simple way to get basic lap timing information from a GPS based system.
  * This library does NOT interface with your GPS, simply feed it data and check the state.
  * Right now this only offers a single split time around the "start/finish" and would not work for many other purposes without modification.
  * 
- * The development of this library has been overseen, and all docblocks have been generated using chatGPT4.
- * 
- * Copyright (c) 2023 Michael Champagne. All rights reserved.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * The development of this library has been overseen, and all documentation has been generated using chatGPT4.
  */
 
 #ifndef _DOVES_LAP_TIMER_H
@@ -203,7 +188,7 @@ public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @brief Gets the race started status.
+   * @brief Gets the race started status (passed the line one time).
    *
    * @return True if the race has started, false otherwise.
    */
@@ -311,9 +296,7 @@ private:
    * @param pointBLng Longitude of the second point of the line in decimal degrees.
    */
   void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
-  #endif
-
-  #ifndef DOVES_LAP_TIMER_FORCE_LINEAR
+  #else
   /**
    * @brief Catmull-Rom spline interpolation between two points
    *
