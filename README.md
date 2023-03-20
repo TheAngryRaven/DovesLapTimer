@@ -94,7 +94,7 @@ Now if you want any running information,  you have the following...
 #define DOVES_LAP_TIMER_DEBUG
 // Change the distance to which we start logging datapoints
 // note: the buffer is configured to only store 300 points at this time
-#define DOVES_LAP_CROSSING_THRESHOLD_METERS 10
+#define DOVES_LAP_TIMER_CROSSING_THRESHOLD_METERS 10
 ```
 
 ## Examples

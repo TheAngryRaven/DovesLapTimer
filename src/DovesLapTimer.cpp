@@ -18,12 +18,12 @@
   #define debugln laptimer_dummy_debug
 #endif
 
-#ifndef DOVES_LAP_CROSSING_THRESHOLD_METERS
-  #define DOVES_LAP_CROSSING_THRESHOLD_METERS 10
+#ifndef DOVES_LAP_TIMER_CROSSING_THRESHOLD_METERS
+  #define DOVES_LAP_TIMER_CROSSING_THRESHOLD_METERS 10
 #endif
 
 DovesLapTimer::DovesLapTimer() {
-  crossingThreshold = DOVES_LAP_CROSSING_THRESHOLD_METERS;
+  crossingThreshold = DOVES_LAP_TIMER_CROSSING_THRESHOLD_METERS;
 }
 
 /////////// main functions
