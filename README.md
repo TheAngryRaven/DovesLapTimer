@@ -84,6 +84,18 @@ Now if you want any running information,  you have the following...
   float getTotalDistanceTraveled() const; // The total distance traveled in meters.
 ```
 
+#### Compile-time Configs
+```c
+// Force the algo to use the 2 closest points to the line and nothing more
+// if not defined, defaults to catmullrom spline using 4 points nearest to the line
+#define DOVES_LAP_TIMER_FORCE_LINEAR
+// enable debug logging of the library to serial
+#define DOVES_LAP_TIMER_DEBUG
+// Change the distance to which we start logging datapoints
+// note: the buffer is configured to only store 300 points at this time
+#define DOVES_LAP_CROSSING_THRESHOLD_METERS 10
+```
+
 ## Examples
 
 * [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
