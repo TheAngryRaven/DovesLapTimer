@@ -3,6 +3,8 @@ Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, using the 4 points closest to the line, creates a catmullrom spline to interpolate the exact crossing time.
 
+Written with love ... and whatever you want to call chatGPT
+
 ## Supported Hardware
 
 * literally anything, but fair warning lots of floating point math
