@@ -1,5 +1,6 @@
 
 
+
 # Doves GPS Lap Timer
 Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
@@ -10,7 +11,8 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 ## Supported Hardware
 
 * literally anything, but fair warning lots of floating point math.
-	* The nrf52840 has a dedicated high speed FPU for both floats and doubles
+	* The [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7) has a dedicated high speed FPU for both floats and doubles
+	* The [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) GPS is another wonderful addition
 
 ## Supported Functions
 * Current lap
@@ -100,10 +102,10 @@ Now if you want any running information,  you have the following...
 
 * [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
 	* Shows all basic functionality, along with a simple display literally showing all basic functionality.
-	* assumes adafruit compatible authentic ublox GPS 
+	* assumes adafruit compatible [authentic ublox GPS ](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
 		* if not authentic, commands might fail but should probably still work.
-	* Originally for nrf52840, might need to remove LED_GREEN blinker
-	* 128x64 i2c 110X display. Display is NOT PRETTY, it is a DEBUG SCREEN.
+	* Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7), might need to remove LED_GREEN blinker
+	* [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is a DEBUG SCREEN.
 		* Too tired to make serial only logger, but you can very easily remove it.
 		* \+ most arduinos and the like only have a single serial.
 	* borb load screen
@@ -111,3 +113,14 @@ Now if you want any running information,  you have the following...
 ## License
 
 This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.org/wiki/MIT_License).
+
+## More features?
+If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone.
+
+Paid version required for DIY loggers and importing NMEA logs, worth every penny.
+
+[RaceChrono Website](https://racechrono.com/)
+[RaceChrono iPhone](https://apps.apple.com/us/app/racechrono-pro/id1129429340)
+[RaceChrono Android](https://play.google.com/store/apps/details?id=com.racechrono.pro&pli=1)
+[https://github.com/aollin/racechrono-ble-diy-device](https://github.com/aollin/racechrono-ble-diy-device)
+Pairs wonderfully with the previously mentioned [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
