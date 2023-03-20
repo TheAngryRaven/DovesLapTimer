@@ -169,9 +169,9 @@ public:
    *
    * @param currentLat Latitude of the current position in decimal degrees.
    * @param currentLng Longitude of the current position in decimal degrees.
-   * @param currentAltitude Altitude of the current position in meters.
+   * @param currentAltitudeMeters Altitude of the current position in meters.
    */
-  void updateOdometer(double currentLat, double currentLng, double currentAltitude);
+  void updateOdometer(double currentLat, double currentLng, double currentAltitudeMeters);
   /**
    * @brief Updates the current GPS time since midnight.
    *

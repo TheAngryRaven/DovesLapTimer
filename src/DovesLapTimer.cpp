@@ -271,8 +271,7 @@ double DovesLapTimer::interpolateWeight(double distA, double distB, float speedA
 }
 
 #ifdef DOVES_LAP_TIMER_FORCE_LINEAR
-void DovesLapTimer::interpolateCrossingPoint(
-  double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng) {
+void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng) {
   int numPoints = crossingPointBufferFull ? crossingPointBufferSize : crossingPointBufferIndex;
 
   // Variables to store the best pair of points
@@ -419,18 +418,18 @@ void DovesLapTimer::setStartFinishLine(double pointALat, double pointALng, doubl
   startFinishPointBLat = pointBLat;
   startFinishPointBLng = pointBLng;
 }
-void DovesLapTimer::updateOdometer(double currentLat, double currentLng, double currentAltitude) {
+void DovesLapTimer::updateOdometer(double currentLat, double currentLng, double currentAltitudeMeters) {
   totalDistanceTraveled += haversineAltitude(
     posistionPrevLat,
     posistionPrevLng,
     posistionPrevAlt,
     currentLat,
     currentLng,
-    currentAltitude
+    currentAltitudeMeters
   );
   posistionPrevLat = currentLat;
   posistionPrevLng = currentLng;
-  posistionPrevAlt = currentAltitude;
+  posistionPrevAlt = currentAltitudeMeters;
 }
 void DovesLapTimer::updateCurrentTime(unsigned long currentTimeMilliseconds) {
   millisecondsSinceMidnight = currentTimeMilliseconds;
