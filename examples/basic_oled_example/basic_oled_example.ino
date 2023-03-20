@@ -1,9 +1,4 @@
 /**
- * @file basic_oled_example.ino
- * @author Michael Champagne (CrimsonDove)
- * @version 1.0
- * @date 2023-03-19
- *
  * Notes: this display of data is not pretty at all, its a debug screen.... the pretty part is your job
  * 
  * Notes: assumes you have the following:
