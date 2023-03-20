@@ -27,18 +27,6 @@ public:
    */
   double paceDifference();
   /**
-   * @brief Updates the total distance traveled by calculating the distance between the current position and the previous position using the haversineAltitude() function.
-   *
-   * This function takes the current latitude, longitude, and altitude as arguments, and computes the distance between the current position and the previous position,
-   * which is stored in the class member variables positionPrevLat, positionPrevLng, and positionPrevAlt.
-   * It then updates the totalDistanceTraveled member variable by adding the computed distance.
-   *
-   * @param currentLat Latitude of the current position in decimal degrees.
-   * @param currentLng Longitude of the current position in decimal degrees.
-   * @param currentAltitude Altitude of the current position in meters.
-   */
-  void updateOdometer(double currentLat, double currentLng, double currentAltitude);
-  /**
    * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.
    *
    * This function is responsible for detecting when the kart is crossing the start/finish line. It compares
@@ -51,10 +39,6 @@ public:
    * @param currentLng Longitude of the current position in decimal degrees.
    */
   void checkStartFinish(double currentLat, double currentLng);
-  /**
-   * @brief Reset all parameters back to 0
-   */
-  void reset();
   /**
    * @brief Calculates the angle between two 2D vectors in degrees.
    *
@@ -164,6 +148,10 @@ public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
+   * @brief Reset all parameters back to 0
+   */
+  void reset();
+  /**
    * @brief Sets the start/finish line using two points (A and B).
    *
    * @param pointALat Latitude of point A in decimal degrees.
@@ -172,6 +160,18 @@ public:
    * @param pointBLng Longitude of point B in decimal degrees.
    */
   void setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng);
+  /**
+   * @brief Updates the total distance traveled by calculating the distance between the current position and the previous position using the haversineAltitude() function.
+   *
+   * This function takes the current latitude, longitude, and altitude as arguments, and computes the distance between the current position and the previous position,
+   * which is stored in the class member variables positionPrevLat, positionPrevLng, and positionPrevAlt.
+   * It then updates the totalDistanceTraveled member variable by adding the computed distance.
+   *
+   * @param currentLat Latitude of the current position in decimal degrees.
+   * @param currentLng Longitude of the current position in decimal degrees.
+   * @param currentAltitude Altitude of the current position in meters.
+   */
+  void updateOdometer(double currentLat, double currentLng, double currentAltitude);
   /**
    * @brief Updates the current GPS time since midnight.
    *
@@ -184,9 +184,6 @@ public:
    * @param currentSpeed The current speed in kilometers per hour
    */
   void updateCurrentSpeedKmh(float currentSpeedkmh);
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
   /**
    * @brief Gets the race started status (passed the line one time).
    *
@@ -212,12 +209,6 @@ public:
    */
   unsigned long getCurrentLapTime() const;
   /**
-   * @brief Gets the current lap time.
-   *
-   * @return The current lap time in milliseconds.
-   */
-  float getCurrentLapDistance() const;
-  /**
    * @brief Gets the last lap time.
    *
    * @return The last lap time in milliseconds.
@@ -236,6 +227,12 @@ public:
    */
   float getCurrentLapOdometerStart() const;
   /**
+   * @brief Gets the current lap time.
+   *
+   * @return The current lap time in milliseconds.
+   */
+  float getCurrentLapDistance() const;
+  /**
    * @brief Gets the last lap distance.
    *
    * @return The distance traveled during the last lap in meters.
@@ -248,6 +245,12 @@ public:
    */
   float getBestLapDistance() const;
   /**
+   * @brief Gets the total distance traveled.
+   *
+   * @return The total distance traveled in meters.
+   */
+  float getTotalDistanceTraveled() const;
+  /**
    * @brief Gets the best lap number.
    *
    * @return The lap number of the best lap.
@@ -259,12 +262,6 @@ public:
    * @return The total number of laps completed.
    */
   int getLaps() const;
-  /**
-   * @brief Gets the total distance traveled.
-   *
-   * @return The total distance traveled in meters.
-   */
-  float getTotalDistanceTraveled() const;
 
 private:
   /**

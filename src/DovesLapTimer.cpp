@@ -26,22 +26,6 @@ DovesLapTimer::DovesLapTimer() {
   crossingThreshold = DOVES_LAP_TIMER_CROSSING_THRESHOLD_METERS;
 }
 
-/////////// main functions
-
-void DovesLapTimer::updateOdometer(double currentLat, double currentLng, double currentAltitude) {
-  totalDistanceTraveled += haversineAltitude(
-    posistionPrevLat,
-    posistionPrevLng,
-    posistionPrevAlt,
-    currentLat,
-    currentLng,
-    currentAltitude
-  );
-  posistionPrevLat = currentLat;
-  posistionPrevLng = currentLng;
-  posistionPrevAlt = currentAltitude;
-}
-
 double DovesLapTimer::paceDifference() {
   double currentLapDistance = currentLapOdometerStart == 0 || raceStarted == false ? 0 : totalDistanceTraveled - currentLapOdometerStart;
   unsigned long currentLapTime = millisecondsSinceMidnight - currentLapStartTime;
@@ -62,6 +46,7 @@ double DovesLapTimer::paceDifference() {
 }
 
 // TODO: update function to be slightly more portable to allow for split timing
+// currently the main "timing loop"
 void DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   double distToLine = INFINITY;
   if (isAcuteTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
@@ -404,51 +389,6 @@ void DovesLapTimer::interpolateCrossingPointOnCurve(double& crossingLat, double&
 
 /////////// getters and setters
 
-void DovesLapTimer::setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng) {
-  startFinishPointALat = pointALat;
-  startFinishPointALng = pointALng;
-  startFinishPointBLat = pointBLat;
-  startFinishPointBLng = pointBLng;
-}
-void DovesLapTimer::updateCurrentTime(unsigned long currentTimeMilliseconds) {
-  millisecondsSinceMidnight = currentTimeMilliseconds;
-}
-void DovesLapTimer::updateCurrentSpeedKmh(float currentSpeedkmh) {
-  this->currentSpeedkmh = currentSpeedkmh;
-}
-bool DovesLapTimer::getRaceStarted() const {
-  return raceStarted;
-}
-bool DovesLapTimer::getCrossing() const {
-  return crossing;
-}
-unsigned long DovesLapTimer::getCurrentLapStartTime() const {
-  return currentLapStartTime;
-}
-unsigned long DovesLapTimer::getLastLapTime() const {
-  return lastLapTime;
-}
-unsigned long DovesLapTimer::getBestLapTime() const {
-  return bestLapTime;
-}
-float DovesLapTimer::getCurrentLapOdometerStart() const {
-  return currentLapOdometerStart;
-}
-float DovesLapTimer::getLastLapDistance() const {
-  return lastLapDistance;
-}
-float DovesLapTimer::getBestLapDistance() const {
-  return bestLapDistance;
-}
-int DovesLapTimer::getBestLapNumber() const {
-  return bestLapNumber;
-}
-int DovesLapTimer::getLaps() const {
-  return laps;
-}
-float DovesLapTimer::getTotalDistanceTraveled() const {
-  return totalDistanceTraveled;
-}
 void DovesLapTimer::reset() {
   // reset main race parameters
   raceStarted = false;
@@ -473,10 +413,68 @@ void DovesLapTimer::reset() {
   crossingPointBufferFull = false;
   memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
 }
+void DovesLapTimer::setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng) {
+  startFinishPointALat = pointALat;
+  startFinishPointALng = pointALng;
+  startFinishPointBLat = pointBLat;
+  startFinishPointBLng = pointBLng;
+}
+void DovesLapTimer::updateOdometer(double currentLat, double currentLng, double currentAltitude) {
+  totalDistanceTraveled += haversineAltitude(
+    posistionPrevLat,
+    posistionPrevLng,
+    posistionPrevAlt,
+    currentLat,
+    currentLng,
+    currentAltitude
+  );
+  posistionPrevLat = currentLat;
+  posistionPrevLng = currentLng;
+  posistionPrevAlt = currentAltitude;
+}
+void DovesLapTimer::updateCurrentTime(unsigned long currentTimeMilliseconds) {
+  millisecondsSinceMidnight = currentTimeMilliseconds;
+}
+void DovesLapTimer::updateCurrentSpeedKmh(float currentSpeedkmh) {
+  this->currentSpeedkmh = currentSpeedkmh;
+}
+bool DovesLapTimer::getRaceStarted() const {
+  return raceStarted;
+}
+bool DovesLapTimer::getCrossing() const {
+  return crossing;
+}
+unsigned long DovesLapTimer::getCurrentLapStartTime() const {
+  return currentLapStartTime;
+}
 unsigned long DovesLapTimer::getCurrentLapTime() const {
   // todo: midnight rollover??? maybe convert to unixStamp?
   return currentLapStartTime <= 0 || raceStarted == false ? 0 : millisecondsSinceMidnight - currentLapStartTime;
 }
+unsigned long DovesLapTimer::getLastLapTime() const {
+  return lastLapTime;
+}
+unsigned long DovesLapTimer::getBestLapTime() const {
+  return bestLapTime;
+}
+float DovesLapTimer::getCurrentLapOdometerStart() const {
+  return currentLapOdometerStart;
+}
 float DovesLapTimer::getCurrentLapDistance() const {
   return currentLapOdometerStart == 0 || raceStarted == false ? 0 : totalDistanceTraveled - currentLapOdometerStart;
+}
+float DovesLapTimer::getLastLapDistance() const {
+  return lastLapDistance;
+}
+float DovesLapTimer::getBestLapDistance() const {
+  return bestLapDistance;
+}
+float DovesLapTimer::getTotalDistanceTraveled() const {
+  return totalDistanceTraveled;
+}
+int DovesLapTimer::getBestLapNumber() const {
+  return bestLapNumber;
+}
+int DovesLapTimer::getLaps() const {
+  return laps;
 }
