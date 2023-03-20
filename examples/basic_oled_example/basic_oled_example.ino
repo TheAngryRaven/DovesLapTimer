@@ -4,8 +4,8 @@
  * Notes: assumes you have the following:
  *  1: a legit ublox GPS (in my case a SAM-M8Q, highly reccomended)
  *  2: a 128x64 1106 i2c oled display
- *  3: your device has both a "Serial"(terminal) and a "Serial1"(GPS) interface
- *      enabling HAS_DEBUG or DOVES_LAP_TIMER_DEBUG should start spitting out information over the terminal
+ *  3: your device has both a "Serial"(terminal) and a "Serial1"(GPS|RX/TX pins) interface
+ *      enabling HAS_DEBUG and/or DOVES_LAP_TIMER_DEBUG should start spitting out information over the terminal
  * 
  * DovesLapTimer does not interface with your GPS directly,
  * you feed it data, and then check the state.
