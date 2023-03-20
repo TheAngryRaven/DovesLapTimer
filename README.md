@@ -118,11 +118,7 @@ If you want more features, go and download this dudes app RaceChrono (available 
 
 Paid version required for DIY loggers and importing NMEA logs, worth every penny.
 
-[RaceChrono Website](https://racechrono.com/)
-
-[RaceChrono iPhone](https://apps.apple.com/us/app/racechrono-pro/id1129429340)
-
-[RaceChrono Android](https://play.google.com/store/apps/details?id=com.racechrono.pro&pli=1)
+[RaceChrono Website](https://racechrono.com/) | [RaceChrono iPhone](https://apps.apple.com/us/app/racechrono-pro/id1129429340) | [RaceChrono Android](https://play.google.com/store/apps/details?id=com.racechrono.pro&pli=1)
 
 [https://github.com/aollin/racechrono-ble-diy-device](https://github.com/aollin/racechrono-ble-diy-device)
 
