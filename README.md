@@ -74,15 +74,15 @@ Now if you want any running information,  you have the following...
   bool getCrossing() const; // True if crossing the start/finish line, false otherwise.
   unsigned long getCurrentLapStartTime() const; // The current lap start time in milliseconds.
   unsigned long getCurrentLapTime() const; // The current lap time in milliseconds.
-  float getCurrentLapDistance() const; // The current lap time in milliseconds.
   unsigned long getLastLapTime() const; // The last lap time in milliseconds.
   unsigned long getBestLapTime() const; // The best lap time in milliseconds.
   float getCurrentLapOdometerStart() const; // The distance traveled at the start of the current lap in meters.
+  float getCurrentLapDistance() const; // The current lap time in milliseconds.
   float getLastLapDistance() const; // The distance traveled during the last lap in meters.
   float getBestLapDistance() const; // The distance traveled during the best lap in meters.
+  float getTotalDistanceTraveled() const; // The total distance traveled in meters.
   int getBestLapNumber() const; // The lap number of the best lap.
   int getLaps() const; // The total number of laps completed.
-  float getTotalDistanceTraveled() const; // The total distance traveled in meters.
 ```
 
 #### Compile-time Configs
