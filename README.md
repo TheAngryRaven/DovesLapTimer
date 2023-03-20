@@ -105,7 +105,7 @@ Now if you want any running information,  you have the following...
 	* assumes adafruit compatible [authentic ublox GPS ](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
 		* if not authentic, commands might fail but should probably still work.
 	* Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7), might need to remove LED_GREEN blinker
-	* [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is a DEBUG SCREEN.
+	* [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
 		* Too tired to make serial only logger, but you can very easily remove it.
 		* \+ most arduinos and the like only have a single serial.
 	* borb load screen
