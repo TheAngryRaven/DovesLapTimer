@@ -66,7 +66,7 @@ Currently only supports one split line, the main start/finish.
   
 ```
 #### Loop()->gpsLoop()
-create a simple function called `getGpsTimeInMilliseconds()` to... as it says, get the current time from the gps in milliseconds.
+create a simple method with the signature `unsigned long getGpsTimeInMilliseconds();` to... as it says, get the current time from the gps in milliseconds.
 
 Now inside of your gps loop, add something like the following
 
