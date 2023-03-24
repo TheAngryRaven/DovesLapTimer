@@ -327,6 +327,7 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
       float deltaOdometer = crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer;
       float deltaTime = crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time;
 
+      // Preform linear interpolation
       crossingLat = crossingPointBuffer[bestIndexA].lat + t * deltaLat;
       crossingLng = crossingPointBuffer[bestIndexA].lng + t * deltaLon;
       crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;  
