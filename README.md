@@ -50,7 +50,7 @@ The code should have clarifying comments wherever there are any unclear bits.
   double crossingThresholdMeters = 10.0;
   DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
   DovesLapTimer lapTimer(crossingThresholdMeters);
-  DovesLapTimer lapTimer();
+  DovesLapTimer lapTimer;
 ```
 #### Setup()
 Currently only supports one split line, the main start/finish.
