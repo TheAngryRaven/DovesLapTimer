@@ -6,18 +6,38 @@
  * The development of this library has been overseen, and all documentation has been generated using chatGPT4.
  */
 
+// #define DOVES_UNIT_TEST
+
 #ifndef _DOVES_LAP_TIMER_H
 #define _DOVES_LAP_TIMER_H
-
 #include <cfloat>
 #include <math.h>
-#include <cstring>
 #include "Arduino.h"
+
+struct crossingPointBufferEntry {
+  double lat; // latitude
+  double lng; // longitude
+  unsigned long time; // current time in milliseconds
+  float odometer; // time traveled since device start and this entry
+  float speedKmh; // speed in kmph
+};
 
 class DovesLapTimer {
 public:
-  DovesLapTimer();
+  DovesLapTimer(double crossingThresholdMeters = 10, Stream *debugSerial = NULL);
 
+  /**
+   * @brief Updates a few internal stats and then checks the status of crossing a line
+   *
+   * This should be run every time the GPS is fixed and gets a new location is aquired!
+   * All of the magic happens here!!!!!!
+   *
+   * @param currentLat Latitude of the current position in decimal degrees.
+   * @param currentLng Longitude of the current position in decimal degrees.
+   * @param currentAltitudeMeters Altitude of the current position in meters.
+   * @param currentSpeed The current speed in knots
+   */
+  int loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots);
   /**
    * @brief Calculates the pace difference between the current lap and the best lap.
    *
@@ -26,32 +46,9 @@ public:
    * value indicates that the current lap's pace is faster.
    */
   double paceDifference();
-  /**
-   * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.
-   *
-   * This function is responsible for detecting when the kart is crossing the start/finish line. It compares
-   * the current position to the start/finish line and, if it is within a specified threshold distance,
-   * starts saving GPS data to a buffer. When the kart moves away from the line, the function calls
-   * interpolateCrossingPoint() to calculate the precise point at which the kart crossed the line,
-   * and computes the lap time.
-   *
-   * @param currentLat Latitude of the current position in decimal degrees.
-   * @param currentLng Longitude of the current position in decimal degrees.
-   */
-  void checkStartFinish(double currentLat, double currentLng);
-  /**
-   * @brief Calculates the angle between two 2D vectors in degrees.
-   *
-   * This function takes the components of two 2D vectors and calculates the angle between them in degrees.
-   * It uses the dot product formula and the arccosine function to compute the angle.
-   *
-   * @param vector1X The x-component of the first vector
-   * @param vector1Y The y-component of the first vector
-   * @param vector2X The x-component of the second vector
-   * @param vector2Y The y-component of the second vector
-   * @return double The angle between the two vectors in degrees
-   */
-  double angleBetweenVectors(double vector1X, double vector1Y, double vector2X, double vector2Y);
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   /**
    * @brief Determines if the triangle formed by three GPS coordinates is an acute triangle.
    * @param lat1 Latitude of the first coordinate.
@@ -64,36 +61,20 @@ public:
    */
   bool isAcuteTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3);
   /**
-   * @brief Determines if the driver is near the given line or not.
-   *
-   * This function takes the latitude and longitude of the driver's current position and calculates
-   * if the driver is near the given line. It forms a triangle with the line as the base and the
-   * driver's position as the third point. The function then checks if both lines formed are less than the base of the line-segment.
-   *
-   * @param driverLat Latitude of the driver's current position in decimal degrees
-   * @param driverLng Longitude of the driver's current position in decimal degrees
-   * @param pointALat Latitude of the first point of the line in decimal degrees
-   * @param pointALng Longitude of the first point of the line in decimal degrees
-   * @param pointBLat Latitude of the second point of the line in decimal degrees
-   * @param pointBLng Longitude of the second point of the line in decimal degrees
-   * @return bool True if the driver is near the line, false otherwise
-   */
-  bool isDriverNearLine(double driverLat, double driverLng, double pointALat, double pointALng, double pointBLat, double pointBLng);
-  /**
    * @brief Determines which side of a line a driver is on.
    *
-   * Given a driver's position and two points defining a line segment, this function computes
-   * the side of the line the driver is on. The line is treated as infinite for the side determination.
+   * Given a point's position and two points defining a line segment, this function computes
+   * the side of the line the point is on. The line is treated as infinite for the side determination.
    * 
-   * @param driverLat The latitude of the driver's position.
-   * @param driverLng The longitude of the driver's position.
+   * @param driverLat The latitude of the point's position.
+   * @param driverLng The longitude of the point's position.
    * @param pointALat The latitude of the first point of the line.
    * @param pointALng The longitude of the first point of the line.
    * @param pointBLat The latitude of the second point of the line.
    * @param pointBLng The longitude of the second point of the line.
-   * @return Returns 1 if the driver is on one side of the line, -1 if the driver is on the other side, and 0 if the driver is exactly on the line.
+   * @return Returns 1 if the point is on one side of the line, -1 if the point is on the other side, and 0 if the point is exactly on the line.
    */
-  int driverSideOfLine(double driverLat, double driverLng, double pointALat, double pointALng, double pointBLat, double pointBLng);
+  int pointOnSideOfLine(double driverLat, double driverLng, double pointALat, double pointALng, double pointBLat, double pointBLng);
   /**
    * @brief Calculate the shortest distance between a point and a line segment.
    *
@@ -143,7 +124,7 @@ public:
    * @param currentAlt Altitude of the second GPS point in meters.
    * @return The 3D distance between the two GPS points in meters.
    */
-  double haversineAltitude(double prevLat, double prevLng, double prevAlt, double currentLat, double curentLng, double currentAlt);
+  double haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double curentLng, double currentAlt);
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -161,29 +142,21 @@ public:
    */
   void setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng);
   /**
-   * @brief Updates the total distance traveled by calculating the distance between the current position and the previous position using the haversineAltitude() function.
-   *
-   * This function takes the current latitude, longitude, and altitude as arguments, and computes the distance between the current position and the previous position,
-   * which is stored in the class member variables positionPrevLat, positionPrevLng, and positionPrevAlt.
-   * It then updates the totalDistanceTraveled member variable by adding the computed distance.
-   *
-   * @param currentLat Latitude of the current position in decimal degrees.
-   * @param currentLng Longitude of the current position in decimal degrees.
-   * @param currentAltitudeMeters Altitude of the current position in meters.
-   */
-  void updateOdometer(double currentLat, double currentLng, double currentAltitudeMeters);
-  /**
    * @brief Updates the current GPS time since midnight.
    *
    * @param currentTimeMilliseconds The current time in milliseconds.
    */
   void updateCurrentTime(unsigned long currentTimeMilliseconds);
   /**
-   * @brief Updates current speed in kilometers per hour
+   * @brief forces linear interpolation when checking crossing line
    *
-   * @param currentSpeed The current speed in kilometers per hour
+   * Might maybe be more accurate if your track(s) finishline is on a straight or other location you expect constant speed
    */
-  void updateCurrentSpeedKmh(float currentSpeedkmh);
+  void forceLinearInterpolation();
+  /**
+   * @brief forces catmullrom interpolation when checking crossing line
+   */
+  void forceCatmullRomInterpolation();
   /**
    * @brief Gets the race started status (passed the line one time).
    *
@@ -263,7 +236,59 @@ public:
    */
   int getLaps() const;
 
+  // this is kind of gross, but I love my testing
+  #ifdef DOVES_UNIT_TEST
+  bool checkStartFinish(double currentLat, double currentLng);
+  double interpolateWeight(double distA, double distB, float speedA, float speedB);
+  double catmullRom(double p0, double p1, double p2, double p3, double t);
+  void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
+
+  static const int crossingPointBufferSize = 300;
+  crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];
+  int crossingPointBufferIndex = 0;
+  bool crossingPointBufferFull = false;
+  #endif
+
 private:
+  template<typename... Args>
+  void debug_print(Args&&... args) {
+    if(_serial) {
+      _serial->print(std::forward<Args>(args)...);
+    }
+  }
+  template<typename... Args>
+  void debug_println(Args&&... args) {
+    if(_serial) {
+      _serial->println(std::forward<Args>(args)...);
+    }
+  }
+
+  #ifndef DOVES_UNIT_TEST
+  /**
+   * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.
+   *
+   * This function is responsible for detecting when the kart is crossing the start/finish line. It compares
+   * the current position to the start/finish line and, if it is within a specified threshold distance,
+   * starts saving GPS data to a buffer. When the kart moves away from the line, the function calls
+   * interpolateCrossingPoint() to calculate the precise point at which the kart crossed the line,
+   * and computes the lap time.
+   *
+   * @param currentLat Latitude of the current position in decimal degrees.
+   * @param currentLng Longitude of the current position in decimal degrees.
+   * @param currentTimeMilliseconds The current time in milliseconds.
+   */
+  bool checkStartFinish(double currentLat, double currentLng);
+  /**
+   * @brief Catmull-Rom spline interpolation between two points
+   *
+   * @param p0 Value at point 0
+   * @param p1 Value at point 1
+   * @param p2 Value at point 2
+   * @param p3 Value at point 3
+   * @param t Interpolation parameter [0, 1]
+   * @return Interpolated value
+   */
+  double catmullRom(double p0, double p1, double p2, double p3, double t);
   /**
    * @brief Computes the interpolation weight based on distances and speeds.
    * 
@@ -274,8 +299,6 @@ private:
    * @return Interpolation weight factor for point A.
    */
   double interpolateWeight(double distA, double distB, float speedA, float speedB);
-
-  #ifdef DOVES_LAP_TIMER_FORCE_LINEAR
   /**
    * @brief Calculates the crossing point's latitude, longitude, and time based on the buffer points and the line defined by two points.
    *
@@ -293,42 +316,16 @@ private:
    * @param pointBLng Longitude of the second point of the line in decimal degrees.
    */
   void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
-  #else
-  /**
-   * @brief Catmull-Rom spline interpolation between two points
-   *
-   * @param p0 Value at point 0
-   * @param p1 Value at point 1
-   * @param p2 Value at point 2
-   * @param p3 Value at point 3
-   * @param t Interpolation parameter [0, 1]
-   * @return Interpolated value
-   */
-  double catmullRom(double p0, double p1, double p2, double p3, double t);
-  /**
-   * @brief Calculates the crossing point's latitude, longitude, and time using Catmull-Rom spline interpolation.
-   *
-   * This function iterates through the buffer of GPS points and finds the best pair of consecutive points
-   * with the smallest sum of distances to the line defined by two points (pointALat, pointALng) and (pointBLat, pointBLng).
-   * It then uses Catmull-Rom spline interpolation to calculate the crossing point's latitude, longitude, and time.
-   *
-   * @param crossingLat Reference to the variable that will store the crossing point's latitude.
-   * @param crossingLng Reference to the variable that will store the crossing point's longitude.
-   * @param crossingTime Reference to the variable that will store the crossing point's time.
-   * @param crossingOdometer Reference to the variable that will store the crossing point's odometer.
-   * @param pointALat Latitude of the first point of the line in decimal degrees.
-   * @param pointALng Longitude of the first point of the line in decimal degrees.
-   * @param pointBLat Latitude of the second point of the line in decimal degrees.
-   * @param pointBLng Longitude of the second point of the line in decimal degrees.
-   */
-  void interpolateCrossingPointOnCurve(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
   #endif
 
+  Stream *_serial;
+  
   unsigned long millisecondsSinceMidnight = -1;
-
   // Timing variables
+  double crossingThresholdMeters;
   bool raceStarted = false;
   bool crossing = false;
+  bool forceLinear = false;
   unsigned long currentLapStartTime = 0;
   unsigned long lastLapTime = 0;
   unsigned long bestLapTime = 0;
@@ -344,30 +341,22 @@ private:
   double posistionPrevLat = 0;
   double posistionPrevLng = 0;
 
-  // Distance in meters to start/finish line to start buffering
-  double crossingThreshold = 10;
-  // Number of GPS coordinates to store in the buffer for interpolation
-  // right now a little excessive for testing
-  static const int crossingPointBufferSize = 300;// = 300;
-
-  struct crossingPointBufferEntry {
-    double lat; // latitude
-    double lng; // longitude
-    unsigned long time; // current time in milliseconds
-    float odometer; // time traveled since device start and this entry
-    float speedKmh; // speed in kmph
-  };
-
   double startFinishPointALat;
   double startFinishPointALng;
   double startFinishPointBLat;
   double startFinishPointBLng;
 
-  const double radiusEarth = 6371.0 * 1000; // Earth's radius in meters
+  // Earth's radius in meters
+  const double radiusEarth = 6371.0 * 1000;
+
+  #ifndef DOVES_UNIT_TEST
+  // Number of GPS coordinates to store in the buffer for interpolation
+  static const int crossingPointBufferSize = 150;
 
   crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];
   int crossingPointBufferIndex = 0;
   bool crossingPointBufferFull = false;
+  #endif
 };
 
 #endif

@@ -1,6 +1,4 @@
 
-
-
 # Doves GPS Lap Timer
 Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
@@ -11,42 +9,61 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 ## Supported Hardware
 
 * literally anything, but fair warning lots of floating point math.
-	* The [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7) has a dedicated high speed FPU for both floats and doubles
-	* The [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) GPS is another wonderful addition
+  * The [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7) has a dedicated high speed FPU for both floats and doubles
+  * The [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) GPS is another wonderful addition
+  * Display data with a[128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
 
 ## Supported Functions
 * Current lap
-	* Time
-	* Distance
-	* Number
+  * Time
+  * Distance
+  * Number
 * Last lap
-	* Time
-	* Distance
+  * Time
+  * Distance
 * Best lap
-	* Time
-	* Distance
-	* Number
+  * Time
+  * Distance
+  * Number
 * Pace difference against current and best lap
 
+## Planned Functions
+* List lap times
+* Splits
+  * "Optimal" Lap
+Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the race.
+If you want literally any other feature, use the [RaceChrono Android|iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
+
 #### TODO
-* Convert gps time into unix time
+* ~~unit tests~~
 * Split timings
-* Add `updateCurrentSpeedKnts` function (default gps speed)
-* Refine interpolation method
 * Better code formatting
 
 ## API
-
 See the source code, specifically the [DovesLapTimer.h](src/DovesLapTimer.h) file.
 The code should have clarifying comments wherever there are any unclear bits.
 
+#### Initialize
+```c
+  // initialize with internal debugger, and or crossingThreshold (default 10)
+  #define DEBUG_SERIAL Serial
+  double crossingThresholdMeters = 10.0;
+  DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
+  DovesLapTimer lapTimer(crossingThresholdMeters);
+  DovesLapTimer lapTimer();
+```
 #### Setup()
 Currently only supports one split line, the main start/finish.
 ```c
-  // initialize laptimer class
+  // define start/finish line
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
-  // reset everything back to zero
+  // default interpolation method
+  lapTimer.forceCatmullRomInterpolation();
+  // Might be more accurate if your finishline is on a location you expect constant speed
+  lapTimer.forceLinearInterpolation();
+  // reset all counters back to zero
   lapTimer.reset();
+  
 ```
 #### Loop()->gpsLoop()
 create a simple function called `getGpsTimeInMilliseconds()` to... as it says, get the current time from the gps in milliseconds.
@@ -55,16 +72,16 @@ Now inside of your gps loop, add something like the following
 
 All of the lap timing magic is happening inside of `checkStartFinish` consider that our "timing loop".
 ```c
-  // always update current speed, speed is accurate with as little as 2 sats
-  lapTimer.updateCurrentSpeedKmh(gps->speed * 1.852);
-  // always keep the time up to date, gps can keep time somewhat well once synced, or via battery backup
-  lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
-
+  // try to always keep the time up to date for pace calculations
+  // can bundle with the others if you dont mind slower pace updates
+  if (gps->satellites >= 1) {
+    lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
+  }
+  // update the timer loop everytime we have fixed data
   if (gps->fixquality > 0) {
-    // must update odometer every refresh (ONLY WHEN FIX VALID)
-    lapTimer.updateOdometer(gps->latitudeDegrees, gps->longitudeDegrees, gps->altitude);
-    // check if we are crossing start/finish line (ONLY WHEN FIX VALID)
-    lapTimer.checkStartFinish(gps->latitudeDegrees, gps->longitudeDegrees);
+    float altitudeMeters = gps->altitude;
+    float speedKnots = gps->speed;
+    lapTimer.loop(gps->latitudeDegrees, gps->longitudeDegrees, altitudeMeters, speedKnots);
   }
 ```
 #### Retrieving Data
@@ -86,28 +103,25 @@ Now if you want any running information,  you have the following...
 ```
 
 #### Compile-time Configs
+Inside [DovesLapTimer.h](src/DovesLapTimer.h)
 ```c
-// Force the algo to use the 2 closest points to the line and nothing more
-// if not defined, defaults to catmullrom spline using 4 points nearest to the line
-#define DOVES_LAP_TIMER_FORCE_LINEAR
-// enable debug logging of the library to serial
-#define DOVES_LAP_TIMER_DEBUG
-// Change the distance to which we start logging datapoints
-// note: the buffer is configured to only store 300 points at this time
-#define DOVES_LAP_TIMER_CROSSING_THRESHOLD_METERS 10
+// Will eventually remove with better tests
+#define DOVES_UNIT_TEST
 ```
 
 ## Examples
 
 * [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
-	* Shows all basic functionality, along with a simple display literally showing all basic functionality.
-	* assumes adafruit compatible [authentic ublox GPS ](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
-		* if not authentic, commands might fail but should probably still work.
-	* Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7), might need to remove LED_GREEN blinker
-	* [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
-		* Too tired to make serial only logger, but you can very easily remove it.
-		* \+ most arduinos and the like only have a single serial.
-	* borb load screen
+  * Shows all basic functionality, along with a simple display literally showing all basic functionality.
+  * assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
+    * if not authentic, commands might fail but should probably still work.
+  * Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7), might need to remove LED_GREEN blinker
+  * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
+    * Too tired to make serial only logger, but you can very easily remove it.
+  * borb load screen
+* [Unit Tests](examples/unit_test/unit_test.ino)
+  * Code fully covered 34 tests
+  * I believe, these results should suffice at 10-18hz below 130mph
 
 ## License
 
@@ -116,10 +130,18 @@ This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.
 ## More features?
 If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone, or log it and send it after the race.
 
+RaceChrono is not a sponsor or affiliated, i just really enjoy the app, but don't like keeping my phone in a go-kart.
+If you are looking for a "proper racing solution", you can log canbus data through the NRF52840, to the RaceChrono app. This will allow you to use a much more affordable GPS module, and have a fully fledged data logger.
+You can also send this data back to another(or the same) BLE device to create custom digital gauge clusters!
+
 Paid version required for DIY loggers and importing NMEA logs, worth every penny.
 
 [RaceChrono Website](https://racechrono.com/) | [RaceChrono iPhone](https://apps.apple.com/us/app/racechrono-pro/id1129429340) | [RaceChrono Android](https://play.google.com/store/apps/details?id=com.racechrono.pro&pli=1)
 
+Source code for: `can-bus logger/gps logger/digital gauges`
 [https://github.com/aollin/racechrono-ble-diy-device](https://github.com/aollin/racechrono-ble-diy-device)
 
 Pairs wonderfully with the previously mentioned [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+
+
+###### Might as well plug my youtube here as well  :^) bunch of 360 karting videos [https://www.youtube.com/shorts/r0rKZCIl5Zw](https://www.youtube.com/shorts/r0rKZCIl5Zw)
