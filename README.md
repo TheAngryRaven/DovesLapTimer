@@ -93,6 +93,7 @@ Now if you want any running information,  you have the following...
   unsigned long getCurrentLapTime() const; // The current lap time in milliseconds.
   unsigned long getLastLapTime() const; // The last lap time in milliseconds.
   unsigned long getBestLapTime() const; // The best lap time in milliseconds.
+  float getPaceDifference() const; // Calculates the pace difference between the current lap and the best lap.
   float getCurrentLapOdometerStart() const; // The distance traveled at the start of the current lap in meters.
   float getCurrentLapDistance() const; // The current lap time in milliseconds.
   float getLastLapDistance() const; // The distance traveled during the last lap in meters.

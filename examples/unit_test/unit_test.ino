@@ -46,9 +46,9 @@ struct GpsCords {
   double lng;
 };
 
-bool testIsAcuteTriangle1();
-bool testIsAcuteTriangle2();
-bool testIsAcuteTriangle3();
+bool testIsObtuseTriangle1();
+bool testIsObtuseTriangle2();
+bool testIsObtuseTriangle3();
 bool testPointOnSideOfLine1();
 bool testPointOnSideOfLine2();
 bool testPointOnSideOfLine3();
@@ -88,9 +88,9 @@ bool testInterpolationLinear4();
 
 Test tests[] = {
   
-  {testIsAcuteTriangle1, "testIsAcuteTriangle1"},
-  {testIsAcuteTriangle2, "testIsAcuteTriangle2"},
-  {testIsAcuteTriangle3, "testIsAcuteTriangle3"},
+  {testIsObtuseTriangle1, "testIsObtuseTriangle1"},
+  {testIsObtuseTriangle2, "testIsObtuseTriangle2"},
+  {testIsObtuseTriangle3, "testIsObtuseTriangle3"},
   {testHaversine1, "testHaversine1"},
   {testHaversine2, "testHaversine2"},
   {testHaversine3, "testHaversine3"},
@@ -280,24 +280,24 @@ bool doubleEquals(double a, double b, double epsilon = EPSILON) {
 
 
 // Test case 1: Acute triangle
-bool testIsAcuteTriangle1() {
-  bool result = lapTimer.isAcuteTriangle(0.0, 0.0, 1.0, 0.0, 0.5, 1.0);
+bool testIsObtuseTriangle1() {
+  bool result = lapTimer.isObtuseTriangle(0.0, 0.0, 1.0, 0.0, 0.5, 1.0);
   if (!result) {
     return false;
   }
   return true;
 }
 // Test case 2: Right triangle
-bool testIsAcuteTriangle2() {
-  bool result = lapTimer.isAcuteTriangle(0.0, 0.0, 0.0, 3.0, 2.236068, 0.0);
+bool testIsObtuseTriangle2() {
+  bool result = lapTimer.isObtuseTriangle(0.0, 0.0, 0.0, 3.0, 2.236068, 0.0);
   if (!result) {
     return false;
   }
   return true;
 }
 // Test case 3: Obtuse triangle
-bool testIsAcuteTriangle3() {
-  bool result = lapTimer.isAcuteTriangle(0.0, 0.0, 1.0, 0.0, 2.0, 2.0);
+bool testIsObtuseTriangle3() {
+  bool result = lapTimer.isObtuseTriangle(0.0, 0.0, 1.0, 0.0, 2.0, 2.0);
   if (result) {
     return false;
   }

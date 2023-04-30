@@ -38,14 +38,6 @@ public:
    * @param currentSpeed The current speed in knots
    */
   int loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots);
-  /**
-   * @brief Calculates the pace difference between the current lap and the best lap.
-   *
-   * This function computes the pace for both the current lap and the best lap, and returns the difference.
-   * A positive value indicates that the current lap's pace is slower than the best lap's pace, while a negative
-   * value indicates that the current lap's pace is faster.
-   */
-  double paceDifference();
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -59,7 +51,7 @@ public:
    * @param lon3 Longitude of the third coordinate.
    * @return true if the triangle is acute, false otherwise.
    */
-  bool isAcuteTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3);
+  bool isObtuseTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3);
   /**
    * @brief Determines which side of a line a driver is on.
    *
@@ -235,6 +227,14 @@ public:
    * @return The total number of laps completed.
    */
   int getLaps() const;
+  /**
+   * @brief Calculates the pace difference between the current lap and the best lap in milliseconds.
+   *
+   * This function computes the pace for both the current lap and the best lap, and returns the difference.
+   * A positive value indicates that the current lap's pace is slower than the best lap's pace, while a negative
+   * value indicates that the current lap's pace is faster.
+   */
+  float getPaceDifference() const;
 
   // this is kind of gross, but I love my testing
   #ifdef DOVES_UNIT_TEST
@@ -351,7 +351,7 @@ private:
 
   #ifndef DOVES_UNIT_TEST
   // Number of GPS coordinates to store in the buffer for interpolation
-  static const int crossingPointBufferSize = 150;
+  static const int crossingPointBufferSize = 500;
 
   crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];
   int crossingPointBufferIndex = 0;

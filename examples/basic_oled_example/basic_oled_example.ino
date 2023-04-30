@@ -46,7 +46,7 @@ Adafruit_GPS* gps = NULL;
 #define SCREEN_HEIGHT 64
 #include "images.h"
 #include "display_config.h"
-int displayUpdateRateHz = 5;
+int displayUpdateRateHz = 10;
 unsigned long displayLastUpdate;
 
 /**
@@ -77,10 +77,16 @@ double crossingThresholdMeters = 10.0;
 // DovesLapTimer lapTimer(crossingThresholdMeters);
 DovesLapTimer lapTimer;
 
+unsigned long startTime;
+unsigned long endTime;
+unsigned long loopCounter;
+const unsigned long updateInterval = 1000;  // Update interval in milliseconds (1000 ms = 1 second)
+float frameRate = 0.0;
+
 void setup() {
   #ifdef HAS_DEBUG
-      Serial.begin(9600);
-      while (!Serial);
+    Serial.begin(9600);
+    while (!Serial);
   #endif
 
   // Initialize oled display
@@ -99,9 +105,28 @@ void setup() {
   lapTimer.reset();
 
   debugln(F("GPS Lap Timer Started"));
+
+  // framerate debuggin
+  startTime = millis();  // Store the current time
+  loopCounter = 0;  // Initialize the loop counter
 }
 
 void loop() {
+  loopCounter++;
+  endTime = millis();
+  // Check if the update interval has passed
+  if (endTime - startTime >= updateInterval) {
+    // Calculate the frame rate (loops per second)
+    frameRate = (float)loopCounter / ((endTime - startTime) / 1000.0);
+    // Reset the loop counter and start time for the next interval
+    loopCounter = 0;
+    startTime = millis();
+
+    debug("Framerate:");
+    debugln(frameRate, 2);
+  
+  }
+
   currentMillis = millis();
   gpsLoop();
   displayLoop();
@@ -290,16 +315,23 @@ void gpsLoop() {
     // just a little debuggin with millis vs gps time
     unsigned long currentTime = getGpsTimeInMilliseconds();
     unsigned long tDiff = -1;
-    if (lastCurTime > 0) {
-      tDiff = currentTime - lastCurTime;
-      if (tDiff > worstTimeDifference || tDiff < 0) {
-        worstTimeDifference = tDiff;
+    if (gps->satellites > 1) {
+      if (lastCurTime > 0) {
+        tDiff = currentTime - lastCurTime;
+        if (tDiff > worstTimeDifference || tDiff < 0) {
+          worstTimeDifference = tDiff;
+        }
+        // display.print(worstTimeDifference);
+      } else {
+        // display.print("0");  
       }
-      display.print(worstTimeDifference);
-    } else {
-      display.print("0");  
+      lastCurTime = currentTime;
     }
-    lastCurTime = currentTime;
+
+    // debugging device "framerate"
+    display.print(frameRate, 1);
+    display.print("Hz");
+
 
     display.println();
 
@@ -360,7 +392,7 @@ void gpsLoop() {
 
     display.println();
     display.print("pace: ");
-    display.print(lapTimer.paceDifference());
+    display.print(lapTimer.getPaceDifference(), 3);
     display.print(" crD:");
     display.print(lapTimer.getCurrentLapDistance());
 

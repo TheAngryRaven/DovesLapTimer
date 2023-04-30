@@ -34,7 +34,7 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   posistionPrevLat = currentLat;
   posistionPrevLng = currentLng;
   posistionPrevAlt = currentAltitudeMeters;
-  totalDistanceTraveled += totalDistanceTraveled;
+  totalDistanceTraveled += distanceTraveledSinceLastUpdate;
 
   // update current speed
   currentSpeedkmh = currentSpeedKnots * 1.852;
@@ -47,35 +47,16 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   }
 }
 
-double DovesLapTimer::paceDifference() {
-  double currentLapDistance = currentLapOdometerStart == 0 || raceStarted == false ? 0 : totalDistanceTraveled - currentLapOdometerStart;
-  unsigned long currentLapTime = millisecondsSinceMidnight - currentLapStartTime;
-
-  // Avoid division by zero
-  if (currentLapDistance == 0 || bestLapDistance == 0) {
-    return 0.0;
-  }
-
-  // Calculate the pace for the current lap and the best lap
-  double currentLapPace = currentLapTime / currentLapDistance;
-  double bestLapPace = bestLapTime / bestLapDistance;
-
-  // Calculate the pace difference
-  double paceDiff = currentLapPace - bestLapPace;
-
-  return paceDiff;  
-}
-
 // TODO: update function to be a bit more portable to allow for split timing
 bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   double distToLine = INFINITY;
-  if (isAcuteTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
+  if (crossing || isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
     distToLine = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
   }
 
   if (crossing) {
     // Check if we've moved out of the threshold area
-    if (distToLine > crossingThresholdMeters) {
+    if (distToLine > crossingThresholdMeters + 1) {
       debugln("probably crossed, lets calculate");
       crossing = false;
 
@@ -126,7 +107,6 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       // Reset the crossingPointBuffer index and full status
       crossingPointBufferIndex = 0;
       crossingPointBufferFull = false;
-      memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
     } else {
       // Update the crossingPointBuffer with the current GPS fix
       crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
@@ -140,10 +120,15 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
         crossingPointBufferFull = true;
       }
 
-      debug("crossing = true, add to crossingPointBuffer: index[");
+      debug("distToLine: ");
+      debug(distToLine);
+      debug(" | crossing = true, add to crossingPointBuffer: index[");
       debug(crossingPointBufferIndex);
       debug("] full[");
       debug(crossingPointBufferFull == true ? "True" : "False");
+      debug("]");
+      debug(" millisecondsSinceMidnight[");
+      debug(millisecondsSinceMidnight);
       debugln("]");
     }
   } else {
@@ -161,7 +146,7 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   }
 }
 
-bool DovesLapTimer::isAcuteTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3) {
+bool DovesLapTimer::isObtuseTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3) {
   // Calculate the side lengths using the haversine function
   double a = haversine(lat1, lon1, lat2, lon2);
   double b = haversine(lat1, lon1, lat3, lon3);
@@ -299,7 +284,11 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
     debug(" : distB: ");
     debug(distB);
     debug(" sideB: ");
-    debugln(sideB);
+    debug(sideB);
+    debug(" sum: ");
+    debugln(sumDistances, 2);
+
+    // got a weird edge case problem if we dont actually cross the line, throws off everything
 
     // Update the best pair of points if the current pair has a smaller sum of distances and the points are on opposite sides of the line
     if (sumDistances < bestSumDistances && sideA != sideB) {
@@ -356,14 +345,15 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
 /////////// getters and setters
 
 void DovesLapTimer::reset() {
+  debugln("Resetting laptimer...");
   // reset main race parameters
   raceStarted = false;
   currentLapStartTime = 0;
   lastLapTime = 0;
   bestLapTime = 0;
-  currentLapOdometerStart = 0.0 ;
-  lastLapDistance = 0.0 ;
-  bestLapDistance = 0.0 ;
+  currentLapOdometerStart = 0.0;
+  lastLapDistance = 0.0;
+  bestLapDistance = 0.0;
   bestLapNumber = 0;
   laps = 0;
 
@@ -433,4 +423,22 @@ int DovesLapTimer::getBestLapNumber() const {
 }
 int DovesLapTimer::getLaps() const {
   return laps;
+}
+float DovesLapTimer::getPaceDifference() const {
+  float currentLapDistance = currentLapOdometerStart == 0 || raceStarted == false ? 0 : totalDistanceTraveled - currentLapOdometerStart;
+  unsigned long currentLapTime = millisecondsSinceMidnight - currentLapStartTime;
+
+  // Avoid division by zero
+  if (currentLapDistance == 0 || bestLapDistance == 0) {
+    return 0.0;
+  }
+
+  // Calculate the pace for the current lap and the best lap
+  float currentLapPace = currentLapTime / currentLapDistance;
+  float bestLapPace = bestLapTime / bestLapDistance;
+
+  // Calculate the pace difference
+  float paceDiff = currentLapPace - bestLapPace;
+
+  return paceDiff;  
 }
