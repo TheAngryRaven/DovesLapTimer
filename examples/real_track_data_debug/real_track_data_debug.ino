@@ -116,7 +116,10 @@ void setup() {
 
   // initialize laptimer class
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
+  // 68.748
   lapTimer.forceLinearInterpolation();
+  // 68.745
+  // lapTimer.forceCatmullRomInterpolation();
 
   // reset everything back to zero
   lapTimer.reset();
