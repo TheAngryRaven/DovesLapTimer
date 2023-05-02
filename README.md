@@ -4,13 +4,13 @@ Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, using the 4 points closest to the line, creates a catmullrom spline to interpolate the exact crossing time.
 
-🤖✨ Crafted with love & a sprinkle of ChatGPT magic! ✨🤖
-
 ## Supported Hardware
 
 * literally anything, but fair warning lots of floating point math.
   * [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
     * Really low power
+      * 65mA~ with screen, gps, and bluetooth
+    * 256KB RAM, 1MB Flash
     * Has a dedicated high speed FPU for both floats and doubles
   * [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
     * This GPS is another wonderful addition, Can be configured
@@ -36,12 +36,13 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 * List lap times
 * Splits (when I get really bored)
   * "Optimal" Lap
-Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the race.
-If you want literally any other feature, use the [RaceChrono Android|iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
+
+Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the rental races.
+If you want literally any other feature, use the [RaceChrono Android   | iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
 
 #### TODO
-* ~~unit tests~~
-* ~~tests using replayed data~~
+* ~~Unit Tests~~
+* ~~Tests using replayed data~~
 * Split timings
 * Better code formatting
 
@@ -140,13 +141,14 @@ Inside [DovesLapTimer.h](src/DovesLapTimer.h)
 
 * [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
   * Shows all basic functionality, along with a simple display literally showing all basic functionality.
-  * assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
-    * if not authentic, commands might fail but should probably still work.
+  * Assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
+    * If not authentic, commands might fail but should probably still work.
   * Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
-    * might need to remove/change LED_GREEN blinker
-  * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
+    * Might need to remove/change LED_GREEN blinker
+  * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2).
+    * Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
     * Too tired to make serial only logger, but you can very easily remove it.
-  * borb load screen
+  * Borb load screen
 * [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
   * Serial Only No GPS Required
   * Simple test using data recorded at [Orlando Kart Center](https://orlandokartcenter.com/)
@@ -166,7 +168,7 @@ This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.
 ## More features?
 If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone, or log it and send it after the race.
 
-RaceChrono is not a sponsor or affiliated, i just really enjoy the app, but don't like keeping my phone in a go-kart.
+RaceChrono is not a sponsor or affiliated, I just really enjoy the app, but don't like keeping my phone in a go-kart.
 If you are looking for a "proper racing solution", you can log canbus data through the NRF52840, to the RaceChrono app. This will allow you to use a much more affordable GPS module, and have a fully fledged data logger.
 You can also send this data back to another(or the same) BLE device to create custom digital gauge clusters!
 
@@ -181,3 +183,5 @@ Pairs wonderfully with the previously mentioned [Seed NRF52840](https://www.amaz
 
 
 ###### Might as well plug my youtube here as well  :^) bunch of 360 karting videos [https://www.youtube.com/shorts/r0rKZCIl5Zw](https://www.youtube.com/shorts/r0rKZCIl5Zw)
+
+🤖✨ Crafted with love & a sprinkle of ChatGPT magic! ✨🤖

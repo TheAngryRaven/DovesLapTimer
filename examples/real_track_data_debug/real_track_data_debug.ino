@@ -41,8 +41,8 @@ const double crossingPointBLng = -81.37957048753776;
 // Actual data from a trip to the track in a rental
 // include one or the other
 // #include "gps_race_data_lap.h"
-// #include "gps_race_data_long_lap.h"
-#include "gps_race_data_2laps.h"
+#include "gps_race_data_long_lap.h"
+// #include "gps_race_data_2laps.h"
 const int num_gps_logs = sizeof(gps_logs) / sizeof(gps_logs[0]);
 
 // Define a static variable to keep track of the last processed line
@@ -122,8 +122,8 @@ void setup() {
 
   // initialize laptimer class
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
-  // lapTimer.forceLinearInterpolation();
-  lapTimer.forceCatmullRomInterpolation();
+  lapTimer.forceLinearInterpolation();
+  // lapTimer.forceCatmullRomInterpolation();
 
   // reset everything back to zero
   lapTimer.reset();
