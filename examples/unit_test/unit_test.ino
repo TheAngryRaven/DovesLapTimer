@@ -15,6 +15,7 @@ double crossingPointALng = -81.379234;
 double crossingPointBLat = 00.00;
 double crossingPointBLng = -00.00;
 
+// reminder: this example pauses code until terminal connected
 #define HAS_DEBUG
 #define DEBUG_SERIAL Serial
 

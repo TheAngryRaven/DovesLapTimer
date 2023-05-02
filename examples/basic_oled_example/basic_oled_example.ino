@@ -14,7 +14,8 @@
  * I like organizing code with defines.... dont shoot me
  */
 
-//THIS DEFINES YOUR START/FINISH LINE
+// THIS DEFINES YOUR START/FINISH LINE
+// use google maps, right click, copy cords
 const double crossingPointALat = 00.00;
 const double crossingPointALng = -00.00;
 const double crossingPointBLat = 00.00;
@@ -55,8 +56,6 @@ unsigned long displayLastUpdate;
 * @return unsigned long The time since midnight in milliseconds
 */
 unsigned long getGpsTimeInMilliseconds() {
-  return millis(); // hotfix, gps time doing a weird
-
   unsigned long timeInMillis = 0;
   timeInMillis += gps->hour * 3600000ULL;   // Convert hours to milliseconds
   timeInMillis += gps->minute * 60000ULL;   // Convert minutes to milliseconds
@@ -72,10 +71,10 @@ unsigned long currentMillis;
 
 #include <DovesLapTimer.h>
 // initialize with internal debugger, and or crossingThreshold (default 10)
+// Don't change this unless you know what you're doing
 double crossingThresholdMeters = 10.0;
 // DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
-// DovesLapTimer lapTimer(crossingThresholdMeters);
-DovesLapTimer lapTimer;
+DovesLapTimer lapTimer(crossingThresholdMeters);
 
 unsigned long startTime;
 unsigned long endTime;
