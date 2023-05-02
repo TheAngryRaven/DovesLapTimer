@@ -49,8 +49,30 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
 
 // TODO: update function to be a bit more portable to allow for split timing
 bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
+  // // dbg
+  // double tempDist = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+  // if (tempDist < crossingThresholdMeters) {
+  //   bool isObt = isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+  //   debug("distToLine: ");
+  //   debug(tempDist);
+  //   debug(" | ");
+  //   debugln(isObt);
+  // }
+  // return false;
+  // // dbg
+
   double distToLine = INFINITY;
-  if (crossing || isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
+  /**
+   * I don't believe this will be entirely great for the long term... let me explain...
+   *
+   * As the user approaches the crossing line, they should form an acute triangle roughly 10m out... in theory
+   * This starts the crossing algo, once enabled the type of triangle no longer matters
+   * Once we are threshold+1 away, interpolate crossing point
+   *
+   * The problem is, i don't believe this can be entirely reliable,
+   * Tt does appear to work on both short and long track configurations at OKC in its current state, but unsure for the future...
+   */
+  if (crossing || !isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
     distToLine = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
   }
 
@@ -107,6 +129,7 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       // Reset the crossingPointBuffer index and full status
       crossingPointBufferIndex = 0;
       crossingPointBufferFull = false;
+      memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
     } else {
       // Update the crossingPointBuffer with the current GPS fix
       crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
@@ -146,19 +169,35 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   }
 }
 
+//TODO: This needs more work honestly, works for now tho
 bool DovesLapTimer::isObtuseTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3) {
-  // Calculate the side lengths using the haversine function
+  // Get side lengths
   double a = haversine(lat1, lon1, lat2, lon2);
   double b = haversine(lat1, lon1, lat3, lon3);
   double c = haversine(lat2, lon2, lat3, lon3);
 
-  // Calculate the squares of the side lengths
-  double aSquared = a * a;
-  double bSquared = b * b;
-  double cSquared = c * c;
+  // Sort the sides in ascending order
+  if (a > b) std::swap(a, b);
+  if (b > c) std::swap(b, c);
+  if (a > b) std::swap(a, b);
 
-  // Check if all angles are less than 90 degrees using the Pythagorean inequality
-  return (aSquared + bSquared > cSquared) && (aSquared + cSquared > bSquared) && (bSquared + cSquared > aSquared);
+  // listen... this has been a long debugging session
+  if ( a + b <= c ) {
+    // debugln("triangle: Impossible");
+    return false;
+  } else {
+    TRITYPE discriminant = a * a + b * b - c * c;
+    if (discriminant < 0) {
+      // debugln("triangle: Obtuse");
+      return true;
+    } else if (discriminant > 0) {
+      // debugln("triangle: Acute");
+      return false;
+    } else {
+      // debugln("triangle: Right Angled");
+      return false;
+    }
+  }
 }
 
 int DovesLapTimer::pointOnSideOfLine(double driverLat, double driverLng, double pointALat, double pointALng, double pointBLat, double pointBLng) {
@@ -292,6 +331,8 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
 
     // Update the best pair of points if the current pair has a smaller sum of distances and the points are on opposite sides of the line
     if (sumDistances < bestSumDistances && sideA != sideB) {
+      debug("new best sum: ");
+      debugln(sumDistances, 2);
       bestSumDistances = sumDistances;
       bestIndexA = i;
       bestIndexB = i + 1;

@@ -13,6 +13,9 @@
 #include <cfloat>
 #include <math.h>
 #include "Arduino.h"
+#include <algorithm>
+
+using TRITYPE = double;
 
 struct crossingPointBufferEntry {
   double lat; // latitude
@@ -42,14 +45,15 @@ public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @brief Determines if the triangle formed by three GPS coordinates is an acute triangle.
-   * @param lat1 Latitude of the first coordinate.
-   * @param lon1 Longitude of the first coordinate.
-   * @param lat2 Latitude of the second coordinate.
-   * @param lon2 Longitude of the second coordinate.
-   * @param lat3 Latitude of the third coordinate.
-   * @param lon3 Longitude of the third coordinate.
-   * @return true if the triangle is acute, false otherwise.
+   * @brief Checks if the triangle formed by the given coordinates is an obtuse triangle.
+   * 
+   * @param lat1 Latitude of the first point
+   * @param lon1 Longitude of the first point
+   * @param lat2 Latitude of the second point
+   * @param lon2 Longitude of the second point
+   * @param lat3 Latitude of the third point
+   * @param lon3 Longitude of the third point
+   * @return true if the triangle is an obtuse triangle, false otherwise
    */
   bool isObtuseTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3);
   /**
@@ -192,9 +196,9 @@ public:
    */
   float getCurrentLapOdometerStart() const;
   /**
-   * @brief Gets the current lap time.
+   * @brief Gets the current lap distance.
    *
-   * @return The current lap time in milliseconds.
+   * @return The distance traveled during the current lap in meters.
    */
   float getCurrentLapDistance() const;
   /**

@@ -9,9 +9,14 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 ## Supported Hardware
 
 * literally anything, but fair warning lots of floating point math.
-  * The [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7) has a dedicated high speed FPU for both floats and doubles
-  * The [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) GPS is another wonderful addition
-  * Display data with a[128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
+  * [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+    * Really low power
+    * Has a dedicated high speed FPU for both floats and doubles
+  * [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
+    * This GPS is another wonderful addition, Can be configured
+    * Uses NMEA or UBLOX commands (NMEA for all included examples)
+  * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
+    * Just for included demo
 
 ## Supported Functions
 * Current lap
@@ -29,13 +34,14 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 
 ## Planned Functions
 * List lap times
-* Splits
+* Splits (when I get really bored)
   * "Optimal" Lap
 Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the race.
 If you want literally any other feature, use the [RaceChrono Android|iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
 
 #### TODO
 * ~~unit tests~~
+* ~~tests using replayed data~~
 * Split timings
 * Better code formatting
 
@@ -45,8 +51,9 @@ The code should have clarifying comments wherever there are any unclear bits.
 
 #### Initialize
 ```c
-  // initialize with internal debugger, and or crossingThreshold (default 10)
+  // Initialize with internal debugger, and or crossingThreshold (default 10)
   #define DEBUG_SERIAL Serial
+  // Only change if you know what you're doing
   double crossingThresholdMeters = 10.0;
   DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
   DovesLapTimer lapTimer(crossingThresholdMeters);
@@ -84,6 +91,24 @@ All of the lap timing magic is happening inside of `checkStartFinish` consider t
     lapTimer.loop(gps->latitudeDegrees, gps->longitudeDegrees, altitudeMeters, speedKnots);
   }
 ```
+
+Here is an example `getGpsTimeInMilliseconds()`
+```c
+  /**
+   * @brief Returns the GPS time since midnight in milliseconds
+   *
+   * @return unsigned long The time since midnight in milliseconds
+   */
+  unsigned long getGpsTimeInMilliseconds() {
+    unsigned long timeInMillis = 0;
+    timeInMillis += gps->hour * 3600000ULL;   // Convert hours to milliseconds
+    timeInMillis += gps->minute * 60000ULL;   // Convert minutes to milliseconds
+    timeInMillis += gps->seconds * 1000ULL;   // Convert seconds to milliseconds
+    timeInMillis += gps->milliseconds;        // Add the milliseconds part
+    return timeInMillis;
+  }
+```
+
 #### Retrieving Data
 Now if you want any running information,  you have the following...
 ```c
@@ -93,9 +118,9 @@ Now if you want any running information,  you have the following...
   unsigned long getCurrentLapTime() const; // The current lap time in milliseconds.
   unsigned long getLastLapTime() const; // The last lap time in milliseconds.
   unsigned long getBestLapTime() const; // The best lap time in milliseconds.
-  float getPaceDifference() const; // Calculates the pace difference between the current lap and the best lap.
+  float getPaceDifference() const; // Calculates the pace difference (in seconds...) between the current lap and the best lap.
   float getCurrentLapOdometerStart() const; // The distance traveled at the start of the current lap in meters.
-  float getCurrentLapDistance() const; // The current lap time in milliseconds.
+  float getCurrentLapDistance() const; // The distance traveled during the current lap in meters.
   float getLastLapDistance() const; // The distance traveled during the last lap in meters.
   float getBestLapDistance() const; // The distance traveled during the best lap in meters.
   float getTotalDistanceTraveled() const; // The total distance traveled in meters.
@@ -107,6 +132,7 @@ Now if you want any running information,  you have the following...
 Inside [DovesLapTimer.h](src/DovesLapTimer.h)
 ```c
 // Will eventually remove with better tests
+// can ignore now that "real data tests" exist
 #define DOVES_UNIT_TEST
 ```
 
@@ -116,13 +142,22 @@ Inside [DovesLapTimer.h](src/DovesLapTimer.h)
   * Shows all basic functionality, along with a simple display literally showing all basic functionality.
   * assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
     * if not authentic, commands might fail but should probably still work.
-  * Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7), might need to remove LED_GREEN blinker
+  * Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+    * might need to remove/change LED_GREEN blinker
   * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2). Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
     * Too tired to make serial only logger, but you can very easily remove it.
   * borb load screen
+* [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
+  * Serial Only No GPS Required
+  * Simple test using data recorded at [Orlando Kart Center](https://orlandokartcenter.com/)
+    * MyLaps    : 1:08:807 (magnetic/official)
+    * DovesTimer: 1:08:748 (LINEAR)
+    * DovesTimer: 1:08.745 (CATMULLROM)
+    * RaceChrono: 1:08:630 (GPS Android App)
 * [Unit Tests](examples/unit_test/unit_test.ino)
   * Code fully covered 34 tests
   * I believe, these results should suffice at 10-18hz below 130mph
+  * Will possibly remove in favor of more "real data tests"
 
 ## License
 

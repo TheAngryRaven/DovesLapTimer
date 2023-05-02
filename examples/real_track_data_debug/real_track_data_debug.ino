@@ -1,7 +1,9 @@
 /**
  * Real debug using adafruit GPS library without a GPS connected
  *
- * Only contains a single lap of data due to memory constraints.
+ * Will probably be cleaned up... eventually... to replace current unit-test suite
+ *
+ * 3 different data-sets available
  */
 #include <stdlib.h>
 #include <string.h>
@@ -25,9 +27,10 @@
 Adafruit_GPS* gps = NULL;
 
 #include <DovesLapTimer.h>
+// probably dont change unless you know what you're doing
 double crossingThresholdMeters = 10.0;
-// DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
-DovesLapTimer lapTimer(crossingThresholdMeters);
+DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
+// DovesLapTimer lapTimer(crossingThresholdMeters);
 
 // orlando kart center
 const double crossingPointALat = 28.41270817056385;
@@ -36,7 +39,10 @@ const double crossingPointBLat = 28.41273038679321;
 const double crossingPointBLng = -81.37957048753776;
 
 // Actual data from a trip to the track in a rental
-#include "gps_race_data_lap.h"
+// include one or the other
+// #include "gps_race_data_lap.h"
+// #include "gps_race_data_long_lap.h"
+#include "gps_race_data_2laps.h"
 const int num_gps_logs = sizeof(gps_logs) / sizeof(gps_logs[0]);
 
 // Define a static variable to keep track of the last processed line
@@ -58,7 +64,7 @@ static int last_processed_line = -1;
 char *gpsLastFakeNMEA() {
     // Check if we've processed all the lines
     if (last_processed_line >= num_gps_logs - 1) {
-        return NULL;
+      return NULL;
     }
     
     // Update the last processed line
@@ -116,10 +122,8 @@ void setup() {
 
   // initialize laptimer class
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
-  // 68.748
-  lapTimer.forceLinearInterpolation();
-  // 68.745
-  // lapTimer.forceCatmullRomInterpolation();
+  // lapTimer.forceLinearInterpolation();
+  lapTimer.forceCatmullRomInterpolation();
 
   // reset everything back to zero
   lapTimer.reset();
@@ -141,19 +145,34 @@ void loop() {
   // will process one loop at a time
   gpsLoop();
 
-  // one line is sat data, other line is location data, dont print after each loop
-  if (last_processed_line > 0 && last_processed_line % 2 != 0) {
-    // debug(".");
+  if (last_processed_line > 0) {
+    debug(".");
 
     if (lastLapTime != lapTimer.getLastLapTime()) {
       lastLapTime = lapTimer.getLastLapTime();
-      debug("LLT: ");
+      debugln();
+      debug("LastLapTime: ");
       debug(lastLapTime / 1000);
       debug(".");
       debugln(lastLapTime % 1000);
     }
 
+    // if (lapTimer.getRaceStarted()) {
+    //   debugln();
+    //   debug("getCurrentLapTime: ");
+    //   debug(lapTimer.getCurrentLapTime() / 1000);
+    //   debug(".");
+    //   debugln(lapTimer.getCurrentLapTime() % 1000);
+    // }
+
+    // for multilap datasets
+    // if (lapTimer.getRaceStarted()) {
+    //   debugln();
+    //   debug("getPaceDifference: ");
+    //   debug(lapTimer.getPaceDifference());
+    // }
+
     // emulate realtime
-    // delay(1000 / 18);
+    // delay(1000 / 25);
   }
 }
