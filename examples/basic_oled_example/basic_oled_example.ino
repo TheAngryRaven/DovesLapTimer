@@ -72,7 +72,7 @@ unsigned long currentMillis;
 #include <DovesLapTimer.h>
 // initialize with internal debugger, and or crossingThreshold (default 10)
 // Don't change this unless you know what you're doing
-double crossingThresholdMeters = 10.0;
+double crossingThresholdMeters = 7.0;
 // DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
 DovesLapTimer lapTimer(crossingThresholdMeters);
 

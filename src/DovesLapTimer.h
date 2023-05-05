@@ -27,7 +27,7 @@ struct crossingPointBufferEntry {
 
 class DovesLapTimer {
 public:
-  DovesLapTimer(double crossingThresholdMeters = 10, Stream *debugSerial = NULL);
+  DovesLapTimer(double crossingThresholdMeters = 7, Stream *debugSerial = NULL);
 
   /**
    * @brief Updates a few internal stats and then checks the status of crossing a line
@@ -56,6 +56,23 @@ public:
    * @return true if the triangle is an obtuse triangle, false otherwise
    */
   bool isObtuseTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3);
+
+  /**
+   * @brief Check if a driver is within a threshold distance of the line formed by the two crossing points.
+   *
+   * This function checks whether the driver is within a threshold distance from the line formed by
+   * crossing points A and B. The threshold is defined by crossingThresholdMeters.
+   * 
+   * @param driverLat Latitude of the driver's position.
+   * @param driverLon Longitude of the driver's position.
+   * @param crossingPointALat Latitude of crossing point A.
+   * @param crossingPointALon Longitude of crossing point A.
+   * @param crossingPointBLat Latitude of crossing point B.
+   * @param crossingPointBLon Longitude of crossing point B.
+   * @return True if the driver is within the threshold distance, otherwise False.
+   */
+  bool insideLineThreshold(double driverLat, double driverLon, double crossingPointALat, double crossingPointALon, double crossingPointBLat, double crossingPointBLon);
+
   /**
    * @brief Determines which side of a line a driver is on.
    *

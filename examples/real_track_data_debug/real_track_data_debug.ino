@@ -28,21 +28,39 @@ Adafruit_GPS* gps = NULL;
 
 #include <DovesLapTimer.h>
 // probably dont change unless you know what you're doing
-double crossingThresholdMeters = 10.0;
+// might be better off making track dependant??
+double crossingThresholdMeters = 7.0;
 DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
 // DovesLapTimer lapTimer(crossingThresholdMeters);
 
 // orlando kart center
-const double crossingPointALat = 28.41270817056385;
-const double crossingPointALng = -81.37973266418031;
-const double crossingPointBLat = 28.41273038679321;
-const double crossingPointBLng = -81.37957048753776;
+// Width of your crossing line is somewhat important
+// Do not make the width of your crossing line too much larger than the track
+// a tolerence is already included, more testing to be done tho
+
+// closer to magnetic loop?
+// const double crossingPointALat = 28.41290746795361;
+// const double crossingPointALng = -81.37966225873988;
+// const double crossingPointBLat = 28.412869236620907;
+// const double crossingPointBLng = -81.37976462986148;
+
+// these two are closer to turn 10 and make it better for testing the detection
+// white line after staging: 16m
+// const double crossingPointALat = 28.41270817056385;
+// const double crossingPointALng = -81.37973266418031;
+// const double crossingPointBLat = 28.41273038679321;
+// const double crossingPointBLng = -81.37957048753776;
+// shorter white line 10.5m
+const double crossingPointALat = 28.41272398509636;
+const double crossingPointALng = -81.37961173507423;
+const double crossingPointBLat = 28.412712209918887;
+const double crossingPointBLng = -81.37971443944673;
 
 // Actual data from a trip to the track in a rental
 // include one or the other
-// #include "gps_race_data_lap.h"
-#include "gps_race_data_long_lap.h"
-// #include "gps_race_data_2laps.h"
+// #include "gps_race_data_lap.h" // normal track
+// #include "gps_race_data_2laps.h" // normal track
+#include "gps_race_data_long_lap.h" // long track
 const int num_gps_logs = sizeof(gps_logs) / sizeof(gps_logs[0]);
 
 // Define a static variable to keep track of the last processed line

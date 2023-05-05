@@ -55,7 +55,7 @@ The code should have clarifying comments wherever there are any unclear bits.
   // Initialize with internal debugger, and or crossingThreshold (default 10)
   #define DEBUG_SERIAL Serial
   // Only change if you know what you're doing
-  double crossingThresholdMeters = 10.0;
+  double crossingThresholdMeters = 7.0;
   DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
   DovesLapTimer lapTimer(crossingThresholdMeters);
   DovesLapTimer lapTimer;
@@ -81,11 +81,10 @@ Now inside of your gps loop, add something like the following
 All of the lap timing magic is happening inside of `checkStartFinish` consider that our "timing loop".
 ```c
   // try to always keep the time up to date for pace calculations
-  // can bundle with the others if you dont mind slower pace updates
   if (gps->satellites >= 1) {
     lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
   }
-  // update the timer loop everytime we have fixed data
+  // update the timer loop only when we have fully fixed data
   if (gps->fixquality > 0) {
     float altitudeMeters = gps->altitude;
     float speedKnots = gps->speed;

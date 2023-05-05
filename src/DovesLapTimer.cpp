@@ -53,10 +53,13 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   // double tempDist = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
   // if (tempDist < crossingThresholdMeters) {
   //   bool isObt = isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
-  //   debug("distToLine: ");
+  //   bool insideFancyTriangle = insideLineThreshold(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+  //   debug(" | distToLine: ");
   //   debug(tempDist);
-  //   debug(" | ");
-  //   debugln(isObt);
+  //   debug(" | isObtuseTriangle: ");
+  //   debug(isObt ? "True" : "False");
+  //   debug(" | insideFancyTriangle: ");
+  //   debugln(insideFancyTriangle ? "True" : "False");
   // }
   // return false;
   // // dbg
@@ -72,7 +75,17 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
    * The problem is, i don't believe this can be entirely reliable,
    * Tt does appear to work on both short and long track configurations at OKC in its current state, but unsure for the future...
    */
-  if (crossing || !isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
+  // if (crossing || !isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
+
+  /**
+   * I think this newer method might work a bit better
+   *
+   * This new method instead uses the width of the crossing line, and the "crossingThresholdMeters" to form a right triangle
+   * This calculated hypotnuse is now the new "threshold" of sorts
+   * We then "draw" a line from the driver to each of the crossing points
+   * If either line drawn is longer than the hypotnuse, we are not in the "crossingThreshold"
+   */
+  if (crossing || insideLineThreshold(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
     distToLine = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
   }
 
@@ -110,7 +123,7 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
         debug("Lap Finish Time: ");
         debug(lapTime);
         debug(" : ");
-        debugln((double)(lapTime/1000), 3);
+        debugln((double)(lapTime/1000.0), 3);
 
         // log best and last time
         lastLapTime = lapTime;
@@ -169,7 +182,32 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
   }
 }
 
-//TODO: This needs more work honestly, works for now tho
+bool DovesLapTimer::insideLineThreshold(double driverLat, double driverLon, double crossingPointALat, double crossingPointALon, double crossingPointBLat, double crossingPointBLon) {
+  // Calculate the distance from the driver to crossing points A and B
+  double driverLengthA = haversine(driverLat, driverLon, crossingPointALat, crossingPointALon);
+  double driverLengthB = haversine(driverLat, driverLon, crossingPointBLat, crossingPointBLon);
+
+  // Calculate the distance between crossing points A and B
+  double crossingLineLength = haversine(crossingPointALat, crossingPointALon, crossingPointBLat, crossingPointBLon);
+
+  // Calculate the maximum allowed distance from the driver to the line formed by crossing points A and B
+  double maxLineLength = sqrt(sq(crossingThresholdMeters) + sq(crossingLineLength));
+
+  // // dbg
+  // debug("crossingLineLength: ");
+  // debug(crossingLineLength, 2);
+  // debug(" | maxLineLength: ");
+  // debug(maxLineLength, 2);
+  // debug(" | driverLengthA: ");
+  // debug(driverLengthA, 2);
+  // debug(" | driverLengthB: ");
+  // debug(driverLengthB, 2);
+  // // dbg
+
+  // Check if the driver is within the threshold distance from the line formed by crossing points A and B
+  return driverLengthA < maxLineLength && driverLengthB < maxLineLength;
+}
+
 bool DovesLapTimer::isObtuseTriangle(double lat1, double lon1, double lat2, double lon2, double lat3, double lon3) {
   // Get side lengths
   double a = haversine(lat1, lon1, lat2, lon2);
@@ -306,7 +344,7 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   double bestSumDistances = DBL_MAX;
 
   // Iterate through the crossingPointBuffer, comparing the sum of distances from the start/finish line of each pair of consecutive points
-  for (int i = 1; i < numPoints - 1; i++) {
+  for (int i = 0; i < numPoints - 1; i++) {
     double distA = pointLineSegmentDistance(crossingPointBuffer[i].lat, crossingPointBuffer[i].lng, pointALat, pointALng, pointBLat, pointBLng);
     double distB = pointLineSegmentDistance(crossingPointBuffer[i + 1].lat, crossingPointBuffer[i + 1].lng, pointALat, pointALng, pointBLat, pointBLng);
     double sumDistances = distA + distB;
@@ -435,7 +473,6 @@ unsigned long DovesLapTimer::getCurrentLapStartTime() const {
   return currentLapStartTime;
 }
 unsigned long DovesLapTimer::getCurrentLapTime() const {
-  // todo: midnight rollover??? maybe convert to unixStamp?
   return currentLapStartTime <= 0 || raceStarted == false ? 0 : millisecondsSinceMidnight - currentLapStartTime;
 }
 unsigned long DovesLapTimer::getLastLapTime() const {
