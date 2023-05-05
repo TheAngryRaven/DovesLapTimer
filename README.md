@@ -45,12 +45,6 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the rental races.
 If you want literally any other feature, use the [RaceChrono Android   | iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
 
-#### TODO
-* ~~Unit Tests~~
-* ~~Tests using replayed data~~
-* Split timings
-* Better code formatting
-
 ## API
 See the source code, specifically the [DovesLapTimer.h](src/DovesLapTimer.h) file.
 The code should have clarifying comments wherever there are any unclear bits.
