@@ -35,7 +35,7 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 
 ### MyLaps (magnetic) Vs DovesLapTimer example
 
-![MyLaps vs DovesLapTimer](https://github.com/TheAngryRaven/DovesLapTimer/raw/master/magnetic-doveslaptimer-01.png)
+![MyLaps vs DovesLapTimer](images/magnetic-doveslaptimer-01.png)
 
 ## Planned Functions
 * List lap times
