@@ -130,8 +130,7 @@ Now if you want any running information,  you have the following...
 #### Compile-time Configs
 Inside [DovesLapTimer.h](src/DovesLapTimer.h)
 ```c
-// Will eventually remove with better tests
-// can ignore now that "real data tests" exist
+// Can ignore now that "real data tests" exist
 #define DOVES_UNIT_TEST
 ```
 
