@@ -50,4 +50,4 @@ Once I get some more data from the track I can test some more, until then, this 
 
 #### Example Code using real GPS data
 I have actually managed to build a tester for you to see the results yourself, storing NMEA gps logs, you can replay them (just remember your chips RAM limitations). I have included 2 datasets for the short track, and 1 for the long track.
-[Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
+[Real Track Data Debug Example Sketch (no GPS required)](examples/real_track_data_debug/real_track_data_debug.ino)
