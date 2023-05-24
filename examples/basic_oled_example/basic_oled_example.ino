@@ -352,14 +352,14 @@ void gpsLoop() {
     // display.print(lapTimer.lapTimer.getCurrentLapTime());
     
     // our wacky way of making sure the driver isnt off to the side and can "actually cross" the line
-    bool idnl = lapTimer.isAcuteTriangle(
+    bool idnl = lapTimer.insideLineThreshold(
       gps->latitudeDegrees, gps->longitudeDegrees,
       crossingPointALat,
       crossingPointALng,
       crossingPointBLat,
       crossingPointBLng
     );
-    display.print(" AT:");
+    display.print(" LT:");
     display.print(idnl == true ? "T" : "F");
     display.print(":");
     // our actual distance to the line reguardless
