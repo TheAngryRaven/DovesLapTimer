@@ -1,9 +1,7 @@
-
-
-# Can a Mathematician please help
+# Problem
 This "blogpost" was honestly created for someone smarter than me to read, call me an idiot, and provide a better solution.
 
-## Crossing Line Detection Pains
+## Description
 Here's a quick rundown of the order of operations.
  1. When close enough to the crossing line, start logging GPS data-points
  2. Once we have crossed the line stop and interpolate crossing point
@@ -28,24 +26,36 @@ No.
 
 Absolutely not, I just want crossing-lines to consist of two GPS cords.
 
-### Let me explain... more
+## Let me explain... more
 So here you can see the problem, now the start/finish line is "marked properly" for this track, but this is still throws the simple "distance to line" idea out the window if you end up getting pushed to the outside. This example data is "perfect conditions". (Ill try to gather some "bad" data next time the long track is run to better test).
 
 ![Problem Explained](images/detection-problem-explained-01.png)
 
-### First Solution Attempted
-This was my first wacky idea, what I was doing was, drawing the crossing line (two points), a bit wider than the track (**red**), then once the driver (**black**) got (`crossingThresholdMeters`) to this line, calculate the type of triangle created (**yellow**), if it is an acute triangle, we can somewhat assume we have gotten close enough to the line, start logging data points for later interpolation.
+## First Solution Attempted
+This was my first wacky idea, what I was doing was:
+1. Drawing the crossing line (two points), a bit wider than the track (**red**)
+2. Once the driver (**black**) got (`crossingThresholdMeters`) to this line, calculate the type of triangle created (**yellow**)
+3. If it is an acute triangle, we can somewhat assume we have gotten close enough to the line
+4. start logging data points for later interpolation.
 
 The problem? Well, again as earlier stated, GPS isn't real-time, there is a specific distance from the line you need to be, before the triangle gets too far obtuse, I noticed in one dataset it worked, and in another it stopped working on the second lap. There is a very fine line where this "works".
 
 ![Old Detection System](images/detection-problem-solution-01.png)
 
-### Second Solution Attempted
-This is my current solution, which seems much better so far with the data I currently have. This looks really silly but let me explain. First we are drawing the crossing line damn near identical with the width of the track (**red**). We then take this width, and our `crossingThresholdMeters` (**blue**) and calculate the hypotenuse for a right triangle (**blue dotted line**). Now we calculate the distance from the driver (**black**) to EACH crossing-line point (**yellow**), if BOTH lines are shorter than the hypotenuse we are actually close to the line. This allows both a "larger" yet also "more precise" detection initialization area (**green**).
+## Second Solution Attempted (currently deployed)
+This is my current solution, which seems much better so far with the data I currently have. This looks really silly but let me explain:
+
+1. First we are drawing the crossing line damn near identical with the width of the track (**red**).
+2. We then take this width, and our `crossingThresholdMeters` (**blue**) and calculate the hypotenuse for a right triangle (**blue dotted line**).
+3. Now we calculate the distance from the driver (**black**) to EACH crossing-line point (**yellow**),
+4. if BOTH lines are shorter than the hypotenuse we are actually close to the line.
+5. This allows both a "larger" yet also "more precise" detection initialization area (**green**).
+
+This solution works with only 2 gps data points, and also works in reverse without any changes (tho your code might want to specify that for logging).
 
 ![New Detection System](images/detection-problem-solution-02.png)
 
-This solution works with only 2 gps data points, and also works in reverse without any changes (tho your code might want to specify that for logging).
+## Conclusion
 Once I get some more data from the track I can test some more, until then, this might actually be a viable solution until I can get some more feedback.
 
 #### Example Code using real GPS data
