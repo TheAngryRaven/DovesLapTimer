@@ -25,14 +25,16 @@ While this is technially an arduino library, this needs a device with a large am
   Getting GPS data is your job, not mine, but here are a couple I reccomend that work well with the Adafruit GPS library.
   
   >**Note:** The [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino) has an example on how to send ublox configuration commands while receiving only NMEA sentences.
+
   * [Matek SAM-M10Q](https://www.amazon.com/SAM-M10Q-Supports-Concurrent-Reception-Multirotor/dp/B0BZ7931G7/)
     * 25hz GPS only
     * 16hz GPS+GALILEO+GLONASS
-  * [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
-    * This GPS is another wonderful addition, Can be configured
     * Uses NMEA or UBLOX commands (NMEA for all included examples)
+  * [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
     * 18hz GPS only
     * 10hz GPS+GLONASS
+    * Uses NMEA or UBLOX commands (NMEA for all included examples)
+
  > **Note:** Check your local/regional RC plane/drone resources for a serial compatible GPS.
  > **US:** [Race Day Quads](https://www.racedayquads.com/) | **EU:** [GetFPV](https://www.getfpv.com/)
 
