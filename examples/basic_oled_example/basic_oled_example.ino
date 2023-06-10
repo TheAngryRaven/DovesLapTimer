@@ -47,7 +47,7 @@ Adafruit_GPS* gps = NULL;
 #define SCREEN_HEIGHT 64
 #include "images.h"
 #include "display_config.h"
-int displayUpdateRateHz = 10;
+int displayUpdateRateHz = 3;
 unsigned long displayLastUpdate;
 
 /**
@@ -95,8 +95,8 @@ void setup() {
   // initialize GPS and send configuration commands
   gpsSetup();
   // enabled built-in seeed NRF52840 led
-  pinMode(NMEA_LED_PIN, OUTPUT);
-  digitalWrite(NMEA_LED_PIN, ledState);
+  // pinMode(NMEA_LED_PIN, OUTPUT);
+  // digitalWrite(NMEA_LED_PIN, ledState);
 
   // initialize laptimer class
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
@@ -120,10 +120,6 @@ void loop() {
     // Reset the loop counter and start time for the next interval
     loopCounter = 0;
     startTime = millis();
-
-    debug("Framerate:");
-    debugln(frameRate, 2);
-  
   }
 
   currentMillis = millis();
@@ -136,7 +132,7 @@ void gpsLoop() {
     if (gps->newNMEAreceived() && gps->parse(gps->lastNMEA())) {
         // Toggle green LED every time valid NMEA is received
         ledState = ledState == LOW ? HIGH : LOW;
-        digitalWrite(NMEA_LED_PIN, ledState);
+        // digitalWrite(NMEA_LED_PIN, ledState);
 
         // try to always keep the time up to date
         if (gps->satellites >= 1) {
@@ -311,22 +307,6 @@ void gpsLoop() {
     display.print(ledState == LOW ? "*" : " ");
     display.print("] ");
 
-    // just a little debuggin with millis vs gps time
-    unsigned long currentTime = getGpsTimeInMilliseconds();
-    unsigned long tDiff = -1;
-    if (gps->satellites > 1) {
-      if (lastCurTime > 0) {
-        tDiff = currentTime - lastCurTime;
-        if (tDiff > worstTimeDifference || tDiff < 0) {
-          worstTimeDifference = tDiff;
-        }
-        // display.print(worstTimeDifference);
-      } else {
-        // display.print("0");  
-      }
-      lastCurTime = currentTime;
-    }
-
     // debugging device "framerate"
     display.print(frameRate, 1);
     display.print("Hz");
@@ -408,13 +388,14 @@ void gpsLoop() {
     // display.print(lapTimer.getLastLapDistance());
     display.print("BLP:");
     display.print(lapTimer.getBestLapTime() / lapTimer.getBestLapDistance());
-    display.print(" CLP:");
-    display.print(lapTimer.getCurrentLapTime() / lapTimer.getCurrentLapDistance());
+    // display.print(" CLP:");
+    // display.print(lapTimer.getCurrentLapTime() / lapTimer.getCurrentLapDistance());
+    display.print(" MPH:");
+    double speedMphFromKnots = gps->speed * 1.15078;
+    display.print(speedMphFromKnots, 2);
 
     display.println();
     display.print("Time:");
-    display.print(tDiff);
-    display.print(":");
     display.println(getGpsTimeInMilliseconds());
 
     display.display();

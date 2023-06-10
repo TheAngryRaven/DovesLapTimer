@@ -6,16 +6,17 @@
  * The development of this library has been overseen, and all documentation has been generated using chatGPT4.
  */
 
-// #define DOVES_UNIT_TEST
-
 #ifndef _DOVES_LAP_TIMER_H
 #define _DOVES_LAP_TIMER_H
-#include <cfloat>
-#include <math.h>
-#include "Arduino.h"
-#include <algorithm>
 
+#include "ArxTypeTraits.h"
 using TRITYPE = double;
+
+#define CROSSING_LINE_SIDE_NONE -100
+#define CROSSING_LINE_SIDE_A -1
+#define CROSSING_LINE_SIDE_EXACT 0
+#define CROSSING_LINE_SIDE_B 1
+
 
 struct crossingPointBufferEntry {
   double lat; // latitude
@@ -257,19 +258,6 @@ public:
    */
   float getPaceDifference() const;
 
-  // this is kind of gross, but I love my testing
-  #ifdef DOVES_UNIT_TEST
-  bool checkStartFinish(double currentLat, double currentLng);
-  double interpolateWeight(double distA, double distB, float speedA, float speedB);
-  double catmullRom(double p0, double p1, double p2, double p3, double t);
-  void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
-
-  static const int crossingPointBufferSize = 300;
-  crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];
-  int crossingPointBufferIndex = 0;
-  bool crossingPointBufferFull = false;
-  #endif
-
 private:
   template<typename... Args>
   void debug_print(Args&&... args) {
@@ -284,7 +272,6 @@ private:
     }
   }
 
-  #ifndef DOVES_UNIT_TEST
   /**
    * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.
    *
@@ -337,7 +324,6 @@ private:
    * @param pointBLng Longitude of the second point of the line in decimal degrees.
    */
   void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
-  #endif
 
   Stream *_serial;
   
@@ -356,11 +342,12 @@ private:
   float currentSpeedkmh = 0.0;
   int bestLapNumber = 0;
   int laps = 0;
+  int crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 
   float totalDistanceTraveled = 0;
-  float posistionPrevAlt = 0;
-  double posistionPrevLat = 0;
-  double posistionPrevLng = 0;
+  float posistionPrevAlt = 0.00;
+  double posistionPrevLat = 0.00;
+  double posistionPrevLng = 0.00;
 
   double startFinishPointALat;
   double startFinishPointALng;
@@ -370,14 +357,16 @@ private:
   // Earth's radius in meters
   const double radiusEarth = 6371.0 * 1000;
 
-  #ifndef DOVES_UNIT_TEST
-  // Number of GPS coordinates to store in the buffer for interpolation
-  static const int crossingPointBufferSize = 500;
+  // HOTFIX for low memory systems, could be expanded with more testing
+  #if ((RAMEND - RAMSTART) > 3000 )
+    static const int crossingPointBufferSize = 100;
+  #else
+    static const int crossingPointBufferSize = 25;
+  #endif
 
   crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];
   int crossingPointBufferIndex = 0;
   bool crossingPointBufferFull = false;
-  #endif
 };
 
 #endif

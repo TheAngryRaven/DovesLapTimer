@@ -1,13 +1,14 @@
 /**
  * Orlando Kart Center 4/29/23
  * One Lap, Normal Track, White Tony Rental
- *
+ * ---------------------------------------------------------
  * MyLaps    : 1:08:807 (magnetic/official)
  * RaceChrono: 1:08:630 (GPS Android App)
  *
  * Last tested:
  * DoveTimer : 1:08:748 (GPS Custom Code) LINEAR
  * DoveTimer : 1:08.745 (GPS Custom Code) CATMULLROM
+ * ---------------------------------------------------------
  */
 
 // const double crossingPointALat = 28.41270817056385;

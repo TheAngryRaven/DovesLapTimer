@@ -1,5 +1,7 @@
 
 
+
+
 # Doves GPS Lap Timer
 Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
@@ -7,8 +9,11 @@ Once past the threshold, using the 4 points closest to the line, creates a catmu
 
 ## Supported Hardware
 
-* literally anything, but fair warning lots of floating point math.
-  * [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+* A device with a large bit of ram, also: warning lots of floating point math.
+  * Arduino Mega+
+    * Technically appears to be working, really pushing it
+  * [Seed NRF52840 (Recommended)](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+    * Fast enough to support GPS/Display/SDCard Logging
     * Really low power
       * 65mA~ with screen, gps, and bluetooth
     * 256KB RAM, 1MB Flash
@@ -57,6 +62,7 @@ The code should have clarifying comments wherever there are any unclear bits.
   double crossingThresholdMeters = 7.0;
   DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
   DovesLapTimer lapTimer(crossingThresholdMeters);
+  // default threshold is 7 meters, this is perfectly valid
   DovesLapTimer lapTimer;
 ```
 #### Setup()
@@ -79,12 +85,11 @@ Now inside of your gps loop, add something like the following
 
 All of the lap timing magic is happening inside of `checkStartFinish` consider that our "timing loop".
 ```c
-  // try to always keep the time up to date for pace calculations
-  if (gps->satellites >= 1) {
-    lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
-  }
   // update the timer loop only when we have fully fixed data
-  if (gps->fixquality > 0) {
+  if (gps->fix) {
+    // Update current time
+    lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
+    // Update current posistional data
     float altitudeMeters = gps->altitude;
     float speedKnots = gps->speed;
     lapTimer.loop(gps->latitudeDegrees, gps->longitudeDegrees, altitudeMeters, speedKnots);
@@ -126,16 +131,11 @@ Now if you want any running information,  you have the following...
   int getBestLapNumber() const; // The lap number of the best lap.
   int getLaps() const; // The total number of laps completed.
 ```
-
-#### Compile-time Configs
-Inside [DovesLapTimer.h](src/DovesLapTimer.h)
-```c
-// Can ignore now that "real data tests" exist
-#define DOVES_UNIT_TEST
-```
-
 ## Examples
-
+* [WokWi Emulator (basic oled example)](https://wokwi.com/projects/367029104171726849)
+  * Includes 4 laps of data
+  * Custom Chip included in repo [./wokwi/](wokwi/)
+    * in-browser demo does not include/support uBlox configuration commands
 * [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
   * Shows all basic functionality, along with a simple display literally showing all basic functionality.
   * Assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
@@ -147,16 +147,13 @@ Inside [DovesLapTimer.h](src/DovesLapTimer.h)
     * Too tired to make serial only logger, but you can very easily remove it.
   * Borb load screen
 * [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
-  * Serial Only No GPS Required
+  * **REQUIRES A LOT OF RAM TO STORE SAMPLE DATA**
+  * **Serial Only** No GPS Required
   * Simple test using data recorded at [Orlando Kart Center](https://orlandokartcenter.com/)
     * MyLaps    : 1:08:807 (magnetic/official)
     * DovesTimer: 1:08:748 (LINEAR)
     * DovesTimer: 1:08.745 (CATMULLROM)
     * RaceChrono: 1:08:630 (GPS Android App)
-* [Unit Tests](examples/unit_test/unit_test.ino)
-  * Code fully covered 34 tests
-  * I believe, these results should suffice at 10-18hz below 130mph
-  * Will possibly remove in favor of more "real data tests"
 
 ## License
 

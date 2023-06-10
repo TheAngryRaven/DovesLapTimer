@@ -23,18 +23,30 @@ DovesLapTimer::DovesLapTimer(double crossingThresholdMeters, Stream *debugSerial
 
 int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots) {
   // Update Odometer
-  double distanceTraveledSinceLastUpdate = this->haversine3D(
-    posistionPrevLat,
-    posistionPrevLng,
-    posistionPrevAlt,
-    currentLat,
-    currentLng,
-    currentAltitudeMeters
-  );
+  if (
+    posistionPrevLat != 0.00 &&
+    posistionPrevLng != 0.00
+  ) {
+    // TODO: I think alt is messing up, investigate more...
+    double distanceTraveledSinceLastUpdate = this->haversine3D(
+      posistionPrevLat,
+      posistionPrevLng,
+      posistionPrevAlt,
+      currentLat,
+      currentLng,
+      currentAltitudeMeters
+    );
+    // double distanceTraveledSinceLastUpdate = this->haversine(
+    //   posistionPrevLat,
+    //   posistionPrevLng,
+    //   currentLat,
+    //   currentLng
+    // );
+    totalDistanceTraveled += distanceTraveledSinceLastUpdate;
+  }
   posistionPrevLat = currentLat;
   posistionPrevLng = currentLng;
   posistionPrevAlt = currentAltitudeMeters;
-  totalDistanceTraveled += distanceTraveledSinceLastUpdate;
 
   // update current speed
   currentSpeedkmh = currentSpeedKnots * 1.852;
@@ -89,56 +101,69 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
     distToLine = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
   }
 
+  // todo: Aborting early results in a bug where it starts checking the crossing immediately after processing
+  // todo: this also causes catmulrom to fail as were missing a control point...
+  // int currentLineSide = pointOnSideOfLine(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+  // if (crossing) {
+  //   if (crossingStartedLineSide == CROSSING_LINE_SIDE_NONE) {   
+  //     distToLine = INFINITY;
+  //   }
+  // }
+
   if (crossing) {
     // Check if we've moved out of the threshold area
     if (distToLine > crossingThresholdMeters + 1) {
       debugln("probably crossed, lets calculate");
       crossing = false;
+      crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 
       // Interpolate the crossing point and its time
-      double crossingLat, crossingLng, crossingOdometer;
-      unsigned long crossingTime;
+      double crossingLat, crossingLng, crossingOdometer = 0.00;
+      unsigned long crossingTime = 0;
       interpolateCrossingPoint(crossingLat, crossingLng, crossingTime, crossingOdometer, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
 
-      debug("crossingLat: ");
-      debugln(crossingLat, 6);
-      debug("crossingLng: ");
-      debugln(crossingLng, 6);
-      debug("crossingOdometer: ");
-      debugln(crossingOdometer);
-      debug("crossingTime: ");
-      debugln(crossingTime);
+      if (crossingTime != 0) {
+        debug("crossingLat: ");
+        debugln(crossingLat, 6);
+        debug("crossingLng: ");
+        debugln(crossingLng, 6);
+        debug("crossingOdometer: ");
+        debugln(crossingOdometer);
+        debug("crossingTime: ");
+        debugln(crossingTime);
 
-      if (raceStarted) {
-        // increment lap counter
-        laps++;
-        // calculate lapTime
-        unsigned long lapTime = crossingTime - currentLapStartTime;
-        double lapDistance = crossingOdometer - currentLapOdometerStart;
-        // Update the start time for the next lap
-        currentLapStartTime = crossingTime;
-        currentLapOdometerStart = crossingOdometer;
+        if (raceStarted) {
+          // increment lap counter
+          laps++;
+          // calculate lapTime
+          unsigned long lapTime = crossingTime - currentLapStartTime;
+          double lapDistance = crossingOdometer - currentLapOdometerStart;
+          // Update the start time for the next lap
+          currentLapStartTime = crossingTime;
+          currentLapOdometerStart = crossingOdometer;
 
-        // Process the lap time (e.g., display it, store it, etc.)
-        debug("Lap Finish Time: ");
-        debug(lapTime);
-        debug(" : ");
-        debugln((double)(lapTime/1000.0), 3);
+          // Process the lap time (e.g., display it, store it, etc.)
+          debug("Lap Finish Time: ");
+          debug(lapTime);
+          debug(" : ");
+          debugln((double)(lapTime/1000.0), 3);
 
-        // log best and last time
-        lastLapTime = lapTime;
-        lastLapDistance = lapDistance;
-        if(bestLapTime <= 0 || lastLapTime < bestLapTime) {
-          bestLapTime = lastLapTime;
-          bestLapDistance = lastLapDistance;
-          bestLapNumber = laps;
+          // log best and last time
+          lastLapTime = lapTime;
+          lastLapDistance = lapDistance;
+          if(bestLapTime <= 0 || lastLapTime < bestLapTime) {
+            bestLapTime = lastLapTime;
+            bestLapDistance = lastLapDistance;
+            bestLapNumber = laps;
+          }
+        } else {
+          currentLapStartTime = crossingTime;
+          currentLapOdometerStart = crossingOdometer;
+          raceStarted = true;
+          debugln("Race Started");
         }
-      } else {
-        currentLapStartTime = crossingTime;
-        currentLapOdometerStart = crossingOdometer;
-        raceStarted = true;
-        debugln("Race Started");
       }
+
       // Reset the crossingPointBuffer index and full status
       crossingPointBufferIndex = 0;
       crossingPointBufferFull = false;
@@ -164,13 +189,22 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       debug(crossingPointBufferFull == true ? "True" : "False");
       debug("]");
       debug(" millisecondsSinceMidnight[");
-      debug(millisecondsSinceMidnight);
-      debugln("]");
+      debugln(millisecondsSinceMidnight);
+
+      // debug("] currentLineSide: ");
+      // debugln(currentLineSide);
+      // if (crossing) {
+      //   if (currentLineSide != crossingStartedLineSide && currentLineSide != CROSSING_LINE_SIDE_EXACT) {
+      //     crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
+      //   }
+      // }
     }
   } else {
     if (distToLine < crossingThresholdMeters) {
+      debugln();
       debugln("we are possibly crossing");
       crossing = true;
+      // crossingStartedLineSide = pointOnSideOfLine(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
     }
   }
 
@@ -246,12 +280,13 @@ int DovesLapTimer::pointOnSideOfLine(double driverLat, double driverLng, double 
 
   double crossProduct = lineDirectionX * driverToPointAY - lineDirectionY * driverToPointAX;
 
+  // todo: defines?
   if (crossProduct > 0) {
-    return 1; // Driver is on one side of the line
+    return CROSSING_LINE_SIDE_A; // Driver is on one side of the line
   } else if (crossProduct < 0) {
-    return -1; // Driver is on the other side of the line
+    return CROSSING_LINE_SIDE_B; // Driver is on the other side of the line
   } else {
-    return 0; // Driver is exactly on the line
+    return CROSSING_LINE_SIDE_EXACT; // Driver is exactly on the line
   }
 }
 
@@ -341,7 +376,7 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   // Variables to store the best pair of points
   int bestIndexA = -1;
   int bestIndexB = -1;
-  double bestSumDistances = DBL_MAX;
+  double bestSumDistances = 100000.0;
 
   // Iterate through the crossingPointBuffer, comparing the sum of distances from the start/finish line of each pair of consecutive points
   for (int i = 0; i < numPoints - 1; i++) {
@@ -365,23 +400,24 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
     debug(" sum: ");
     debugln(sumDistances, 2);
 
-    // got a weird edge case problem if we dont actually cross the line, throws off everything
-
     // Update the best pair of points if the current pair has a smaller sum of distances and the points are on opposite sides of the line
+    // todo: investigate if accuracy "on line" is good enough to avoid interpolation
     if (sumDistances < bestSumDistances && sideA != sideB) {
       debug("new best sum: ");
       debugln(sumDistances, 2);
       bestSumDistances = sumDistances;
       bestIndexA = i;
       bestIndexB = i + 1;
+      // this seems safe, as soon as we cross the line, no two points can be closer...
+      break;
     }
   }
-  debug(" bestSumDistances: ");
+  debug("bestSumDistances: ");
   debugln(bestSumDistances);
 
   // Make sure we found a valid pair of points
-  if (bestIndexA != -1 && bestIndexB != -1) {
-
+  if (bestSumDistances < crossingThresholdMeters && bestIndexA != -1 && bestIndexB != -1) {
+    debugln("~~~ VALID CROSSING ~~~");
     if (forceLinear) {
       // Interpolate the crossing point's latitude, longitude, and time using the best pair of points
       double distA = pointLineSegmentDistance(crossingPointBuffer[bestIndexA].lat, crossingPointBuffer[bestIndexA].lng, pointALat, pointALng, pointBLat, pointBLng);
@@ -418,7 +454,10 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
       crossingTime = catmullRom(crossingPointBuffer[index0].time, crossingPointBuffer[index1].time, crossingPointBuffer[index2].time, crossingPointBuffer[index3].time, t);
       crossingOdometer = catmullRom(crossingPointBuffer[index0].odometer, crossingPointBuffer[index1].odometer, crossingPointBuffer[index2].odometer, crossingPointBuffer[index3].odometer, t);
     }
+  } else {
+    debugln("~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~");
   }
+  return;
 }
 
 /////////// getters and setters
@@ -447,6 +486,7 @@ void DovesLapTimer::reset() {
   crossingPointBufferIndex = 0;
   crossingPointBufferFull = false;
   memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
+  crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 }
 void DovesLapTimer::setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng) {
   startFinishPointALat = pointALat;

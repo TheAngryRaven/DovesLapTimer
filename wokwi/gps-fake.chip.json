@@ -1,0 +1,10 @@
+{
+  "name": "GPS Fake 18hz 19200",
+  "author": "TheAngryRaven",
+  "pins": [
+    "RX",
+    "TX",
+    "GND",
+    "VCC"
+  ]
+}

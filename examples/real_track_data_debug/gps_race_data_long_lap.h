@@ -1,7 +1,7 @@
 /**
  * Orlando Kart Center (half of original data)
  * Single Lap, Pro Track, 2Stroke Praga Mini/Rotax
- *
+ * ---------------------------------------------------------
  * MyLaps    : -:--.--- (magnetic/official)
  * MyCrono   : -:--.--- (Professional GPS Datalogger)
  * RaceChrono: -:58.640 (GPS Android App)
@@ -9,6 +9,7 @@
  * Last tested:
  * DoveTimer : -:58.611 (GPS Custom Code) LINEAR
  * DoveTimer : -:58.611 (GPS Custom Code) CATMULLROM
+ * ---------------------------------------------------------
  */
 
 // const double crossingPointALat = 28.41270817056385;

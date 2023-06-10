@@ -38,29 +38,17 @@ DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
 // Do not make the width of your crossing line too much larger than the track
 // a tolerence is already included, more testing to be done tho
 
-// closer to magnetic loop?
-// const double crossingPointALat = 28.41290746795361;
-// const double crossingPointALng = -81.37966225873988;
-// const double crossingPointBLat = 28.412869236620907;
-// const double crossingPointBLng = -81.37976462986148;
-
 // these two are closer to turn 10 and make it better for testing the detection
-// white line after staging: 16m
-// const double crossingPointALat = 28.41270817056385;
-// const double crossingPointALng = -81.37973266418031;
-// const double crossingPointBLat = 28.41273038679321;
-// const double crossingPointBLng = -81.37957048753776;
-// shorter white line 10.5m
-const double crossingPointALat = 28.41272398509636;
-const double crossingPointALng = -81.37961173507423;
-const double crossingPointBLat = 28.412712209918887;
-const double crossingPointBLng = -81.37971443944673;
+const double crossingPointALat = 28.41270817056385;
+const double crossingPointALng = -81.37973266418031;
+const double crossingPointBLat = 28.41273038679321;
+const double crossingPointBLng = -81.37957048753776;
 
-// Actual data from a trip to the track in a rental
-// include one or the other
+// Actual data samples from a trip to the track
 // #include "gps_race_data_lap.h" // normal track
-// #include "gps_race_data_2laps.h" // normal track
-#include "gps_race_data_long_lap.h" // long track
+#include "gps_race_data_2laps.h" // normal track
+// #include "gps_race_data_long_lap.h" // long track
+
 const int num_gps_logs = sizeof(gps_logs) / sizeof(gps_logs[0]);
 
 // Define a static variable to keep track of the last processed line
@@ -114,14 +102,11 @@ unsigned long getGpsTimeInMilliseconds() {
 
 void gpsLoop() {
     if (gps->parse(gpsLastFakeNMEA())) {
-
-        // try to always keep the time up to date
-        if (gps->satellites >= 1) {
-          lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
-        }
-
         // update the timer loop everytime we have fixed data
-        if (gps->fixquality > 0) {
+        if (gps->fix) {
+          // Update current time
+          lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
+          // Update current posistional data
           float altitudeMeters = gps->altitude;
           float speedKnots = gps->speed;
           lapTimer.loop(gps->latitudeDegrees, gps->longitudeDegrees, altitudeMeters, speedKnots);
@@ -155,6 +140,7 @@ void loop() {
   if (last_processed_line >= num_gps_logs - 1 ) {
     if (!done) {
       done = true;
+      debugln();
       debugln("~~~~~~~~Finished~~~~~~~~");
     }
     return;
