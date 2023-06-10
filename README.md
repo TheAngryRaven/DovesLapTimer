@@ -1,8 +1,3 @@
-
-
-
-
-
 # Doves GPS Lap Timer
 Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
@@ -19,30 +14,31 @@ While this is technially an arduino library, this needs a device with a large am
     * 65mA~ with screen, gps, and bluetooth
   * 256KB RAM, 1MB Flash
   * Sense version **not** required
-  
+
 
 ## Supported Hardware: GPS
   Getting GPS data is your job, not mine, but here are a couple I reccomend that work well with the Adafruit GPS library.
   
   >**Note:** The [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino) has an example on how to send ublox configuration commands while receiving only NMEA sentences.
 
-  * [Matek SAM-M10Q](https://www.amazon.com/SAM-M10Q-Supports-Concurrent-Reception-Multirotor/dp/B0BZ7931G7/)
-    * 25hz GPS only
-    * 16hz GPS+GALILEO+GLONASS
-    * Uses NMEA or UBLOX commands (NMEA for all included examples)
-  * [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
-    * 18hz GPS only
-    * 10hz GPS+GLONASS
-    * Uses NMEA or UBLOX commands (NMEA for all included examples)
+* [Matek SAM-M10Q](https://www.amazon.com/SAM-M10Q-Supports-Concurrent-Reception-Multirotor/dp/B0BZ7931G7/)
+  * 25hz GPS only
+  * 16hz GPS+GALILEO+GLONASS
+  * Uses NMEA or UBLOX commands (NMEA for all included examples)
+* [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
+  * 18hz GPS only
+  * 10hz GPS+GLONASS
+  * Uses NMEA or UBLOX commands (NMEA for all included examples)
+* **Check your local/regional RC plane/drone resources for a serial compatible GPS!**
+  * **US:** [Race Day Quads](https://www.racedayquads.com/)
+  * **EU:** [GetFPV](https://www.getfpv.com/)
 
-  * **Check your local/regional RC plane/drone resources for a serial compatible GPS!**
-    * **US:** [Race Day Quads](https://www.racedayquads.com/)
-    * **EU:** [GetFPV](https://www.getfpv.com/)
 
 ## Supported Hardware: Display
-  * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
-    * **Note:** Only here for the included demo
-    * **Note:** Demo also includes pre-compile switch for 1306 displays
+* [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
+  * **Note:** Only here for the included demo
+  * **Note:** Demo also includes pre-compile switch for 1306 displays
+
 
 ## Supported Functions
 * Current lap
