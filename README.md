@@ -35,8 +35,9 @@ While this is technially an arduino library, this needs a device with a large am
     * 10hz GPS+GLONASS
     * Uses NMEA or UBLOX commands (NMEA for all included examples)
 
- > **Note:** Check your local/regional RC plane/drone resources for a serial compatible GPS.
- > **US:** [Race Day Quads](https://www.racedayquads.com/) | **EU:** [GetFPV](https://www.getfpv.com/)
+  * **Check your local/regional RC plane/drone resources for a serial compatible GPS!**
+    * **US:** [Race Day Quads](https://www.racedayquads.com/)
+    * **EU:** [GetFPV](https://www.getfpv.com/)
 
 ## Supported Hardware: Display
   * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
