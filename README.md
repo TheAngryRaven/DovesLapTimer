@@ -175,6 +175,16 @@ Now if you want any running information,  you have the following...
 
 This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.org/wiki/MIT_License).
 
+## Dependicies
+* Auto-Included/Required
+  * [ArxTypeTraits](https://github.com/hideakitai/ArxTypeTraits/actions)
+* Nice To Use / Used in examples
+  * [Adafruit_GPS](https://github.com/adafruit/Adafruit_GPS)
+    * My go-to gps library
+  * [Adafruit-GFX-Library](https://github.com/adafruit/Adafruit-GFX-Library)
+  * [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
+  * [Adafruit_SH110x](https://github.com/wonho-maker/Adafruit_SH110x)
+
 ## More features?
 If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone, or log it and send it after the race.
 
