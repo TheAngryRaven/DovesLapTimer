@@ -332,7 +332,7 @@ private:
   double crossingThresholdMeters;
   bool raceStarted = false;
   bool crossing = false;
-  bool forceLinear = false;
+  bool forceLinear = true;
   unsigned long currentLapStartTime = 0;
   unsigned long lastLapTime = 0;
   unsigned long bestLapTime = 0;
