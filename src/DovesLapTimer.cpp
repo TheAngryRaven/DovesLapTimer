@@ -27,7 +27,7 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
     posistionPrevLat != 0.00 &&
     posistionPrevLng != 0.00
   ) {
-    // TODO: I think alt is messing up, investigate more...
+    // TODO: I think alt is messing up, investigate more... maybe flag?
     double distanceTraveledSinceLastUpdate = this->haversine3D(
       posistionPrevLat,
       posistionPrevLng,
