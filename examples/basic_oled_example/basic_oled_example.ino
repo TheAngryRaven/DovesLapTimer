@@ -103,6 +103,9 @@ void setup() {
   // reset everything back to zero
   lapTimer.reset();
 
+  // CURRENTLY REQUIRED: BUG IN CATMULROM INTERPOLATION METHOD
+  lapTimer.forceLinearInterpolation();
+
   debugln(F("GPS Lap Timer Started"));
 
   // framerate debuggin
@@ -134,13 +137,10 @@ void gpsLoop() {
         ledState = ledState == LOW ? HIGH : LOW;
         // digitalWrite(NMEA_LED_PIN, ledState);
 
-        // try to always keep the time up to date
-        if (gps->satellites >= 1) {
+        // update the timer loop only when we have fixed data
+        if (gps->fix) {
           lapTimer.updateCurrentTime(getGpsTimeInMilliseconds());
-        }
 
-        // update the timer loop everytime we have fixed data
-        if (gps->fixquality > 0) {
           float altitudeMeters = gps->altitude;
           float speedKnots = gps->speed;
           lapTimer.loop(gps->latitudeDegrees, gps->longitudeDegrees, altitudeMeters, speedKnots);
