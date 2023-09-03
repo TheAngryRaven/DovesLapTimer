@@ -501,7 +501,9 @@ void DovesLapTimer::forceLinearInterpolation() {
   forceLinear = true;
 }
 void DovesLapTimer::forceCatmullRomInterpolation() {
-  forceLinear = false;
+  // forceLinear = false;
+  // currently bugged, sorry
+  forceLinear = true;
 }
 bool DovesLapTimer::getRaceStarted() const {
   return raceStarted;
