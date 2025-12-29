@@ -56,6 +56,12 @@ While this is technially an arduino library, this needs a device with a large am
   * Distance
   * Number
 * Pace difference against current and best lap
+* **Sector timing** (optional)
+  * 3 sectors per lap (Sector 1, 2, and 3)
+  * Best time for each sector
+  * Current lap sector times
+  * Optimal lap time (sum of best sectors)
+  * Track which lap achieved best sector times
 
 ### MyLaps (magnetic) Vs DovesLapTimer example
 
@@ -63,8 +69,6 @@ While this is technially an arduino library, this needs a device with a large am
 
 ## Planned Functions
 * List lap times
-* Splits (when I get really bored)
-  * "Optimal" Lap
 
 Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the rental races.
 If you want literally any other feature, use the [RaceChrono Android   | iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
@@ -85,17 +89,24 @@ The code should have clarifying comments wherever there are any unclear bits.
   DovesLapTimer lapTimer;
 ```
 #### Setup()
-Currently only supports one split line, the main start/finish.
 ```c
   // define start/finish line
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
+
+  // OPTIONAL: define sector lines for split timing
+  // Sector 1 = Start/Finish → Sector 2
+  // Sector 2 = Sector 2 → Sector 3
+  // Sector 3 = Sector 3 → Start/Finish
+  lapTimer.setSector2Line(sector2PointALat, sector2PointALng, sector2PointBLat, sector2PointBLng);
+  lapTimer.setSector3Line(sector3PointALat, sector3PointALng, sector3PointBLat, sector3PointBLng);
+
   // default interpolation method
   lapTimer.forceCatmullRomInterpolation();
   // Might be more accurate if your finishline is on a location you expect constant speed
   lapTimer.forceLinearInterpolation();
   // reset all counters back to zero
   lapTimer.reset();
-  
+
 ```
 #### Loop()->gpsLoop()
 create a simple method with the signature `unsigned long getGpsTimeInMilliseconds();` to... as it says, get the current time from the gps in milliseconds.
@@ -135,6 +146,7 @@ Here is an example `getGpsTimeInMilliseconds()`
 #### Retrieving Data
 Now if you want any running information,  you have the following...
 ```c
+  // Basic lap timing
   bool getRaceStarted() const; // True if the race has started, false otherwise (passed the line one time).
   bool getCrossing() const; // True if crossing the start/finish line, false otherwise.
   unsigned long getCurrentLapStartTime() const; // The current lap start time in milliseconds.
@@ -149,6 +161,20 @@ Now if you want any running information,  you have the following...
   float getTotalDistanceTraveled() const; // The total distance traveled in meters.
   int getBestLapNumber() const; // The lap number of the best lap.
   int getLaps() const; // The total number of laps completed.
+
+  // Sector timing (requires setSector2Line and setSector3Line to be called)
+  bool areSectorLinesConfigured() const; // True if both sector lines are configured.
+  int getCurrentSector() const; // Current sector (0=not started, 1/2/3=in sector).
+  unsigned long getBestSector1Time() const; // Best sector 1 time in milliseconds.
+  unsigned long getBestSector2Time() const; // Best sector 2 time in milliseconds.
+  unsigned long getBestSector3Time() const; // Best sector 3 time in milliseconds.
+  unsigned long getCurrentLapSector1Time() const; // Current lap sector 1 time in milliseconds.
+  unsigned long getCurrentLapSector2Time() const; // Current lap sector 2 time in milliseconds.
+  unsigned long getCurrentLapSector3Time() const; // Current lap sector 3 time in milliseconds.
+  unsigned long getOptimalLapTime() const; // Sum of best sector times in milliseconds.
+  int getBestSector1LapNumber() const; // Lap number that achieved best sector 1.
+  int getBestSector2LapNumber() const; // Lap number that achieved best sector 2.
+  int getBestSector3LapNumber() const; // Lap number that achieved best sector 3.
 ```
 ## Examples
 * [WokWi Emulator (basic oled example)](https://wokwi.com/projects/367029104171726849)
@@ -157,7 +183,7 @@ Now if you want any running information,  you have the following...
     * in-browser demo does not include/support uBlox configuration commands
 * [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
   * Shows all basic functionality, along with a simple display literally showing all basic functionality.
-  * Assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT) 
+  * Assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
     * If not authentic, sending configuration commands might fail but receiving data should probably still work.
   * Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
     * Might need to remove/change LED_GREEN blinker
@@ -165,6 +191,12 @@ Now if you want any running information,  you have the following...
     * Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
     * Too tired to make serial only logger, but you can very easily remove it.
   * Borb load screen
+* [Sector Timing Example](examples/sector_timing_example/sector_timing_example.ino)
+  * **NEW!** Demonstrates sector split timing functionality
+  * Shows how to configure sector 2 and sector 3 lines
+  * Displays best sector times and optimal lap calculation
+  * Tracks which lap achieved each best sector time
+  * Serial output only (easy to integrate into existing projects)
 * [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
   * **REQUIRES A LOT OF RAM TO STORE SAMPLE DATA**
   * **Serial Only** No GPS Required
