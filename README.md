@@ -1,4 +1,7 @@
+# Update
+Full datalogger + STL case files dropped over at [https://github.com/TheAngryRaven/DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (no readme yet)
 
+Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer) (100% vibe code)
 # Doves GPS Lap Timer
 Library for Arduino for creating mostly accurate lap-timings using GPS data.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
