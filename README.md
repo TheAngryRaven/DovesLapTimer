@@ -241,5 +241,3 @@ Pairs wonderfully with the previously mentioned [Seed NRF52840](https://www.amaz
 
 
 ###### Might as well plug my youtube here as well  :^) bunch of 360 karting videos [https://www.youtube.com/shorts/r0rKZCIl5Zw](https://www.youtube.com/shorts/r0rKZCIl5Zw)
-
-🤖✨ Crafted with love & a sprinkle of ChatGPT magic! ✨🤖
