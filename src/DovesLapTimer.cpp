@@ -52,11 +52,56 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   currentSpeedkmh = currentSpeedKnots * 1.852;
 
   // run calculations for each crossing-line
+  // Priority order: check whichever line we're currently crossing first,
+  // then check others. Only one line can be "crossing" at a time due to shared buffer.
+
+  bool nearAnyLine = false;
+
+  // Always check start/finish line
   if (this->checkStartFinish(currentLat, currentLng)) {
-    return 0;
-  } else {
-    return -1;
+    nearAnyLine = true;
   }
+
+  // Check sector lines if configured and not currently crossing start/finish
+  if (areSectorLinesConfigured() && !crossing) {
+    // Check sector 2 line
+    if (sector2LineConfigured && !crossingSector2 && !crossingSector3) {
+      if (checkSectorLine(currentLat, currentLng,
+                          sector2PointALat, sector2PointALng,
+                          sector2PointBLat, sector2PointBLng,
+                          crossingSector2, 2)) {
+        nearAnyLine = true;
+      }
+    } else if (crossingSector2) {
+      // Continue processing sector 2 crossing
+      if (checkSectorLine(currentLat, currentLng,
+                          sector2PointALat, sector2PointALng,
+                          sector2PointBLat, sector2PointBLng,
+                          crossingSector2, 2)) {
+        nearAnyLine = true;
+      }
+    }
+
+    // Check sector 3 line
+    if (sector3LineConfigured && !crossingSector2 && !crossingSector3) {
+      if (checkSectorLine(currentLat, currentLng,
+                          sector3PointALat, sector3PointALng,
+                          sector3PointBLat, sector3PointBLng,
+                          crossingSector3, 3)) {
+        nearAnyLine = true;
+      }
+    } else if (crossingSector3) {
+      // Continue processing sector 3 crossing
+      if (checkSectorLine(currentLat, currentLng,
+                          sector3PointALat, sector3PointALng,
+                          sector3PointBLat, sector3PointBLng,
+                          crossingSector3, 3)) {
+        nearAnyLine = true;
+      }
+    }
+  }
+
+  return nearAnyLine ? 0 : -1;
 }
 
 // TODO: update function to be a bit more portable to allow for split timing
@@ -156,11 +201,17 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
             bestLapDistance = lastLapDistance;
             bestLapNumber = laps;
           }
+
+          // Handle sector timing if configured
+          handleLineCrossing(crossingTime, 0);
         } else {
           currentLapStartTime = crossingTime;
           currentLapOdometerStart = crossingOdometer;
           raceStarted = true;
           debugln(F("Race Started"));
+
+          // Handle sector timing if configured (start sector 1)
+          handleLineCrossing(crossingTime, 0);
         }
       }
 
@@ -460,6 +511,180 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   return;
 }
 
+/////////// sector timing helper methods
+
+void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNumber) {
+  if (!areSectorLinesConfigured()) {
+    // If sector lines not configured, just handle start/finish as before
+    return;
+  }
+
+  if (sectorNumber == 0) {
+    // Crossing start/finish line
+    if (raceStarted && currentSector == 3) {
+      // Completing sector 3 and finishing lap
+      currentLapSector3Time = crossingTime - currentSectorStartTime;
+
+      debug(F("Sector 3 Time: "));
+      debugln(currentLapSector3Time);
+
+      // Update best sectors
+      updateBestSectors();
+    }
+
+    // Start sector 1
+    currentSector = 1;
+    currentSectorStartTime = crossingTime;
+    currentLapSector1Time = 0;
+    currentLapSector2Time = 0;
+    currentLapSector3Time = 0;
+
+    debug(F("Starting Sector 1"));
+    debugln();
+
+  } else if (sectorNumber == 2) {
+    // Crossing sector 2 line
+    if (currentSector == 1) {
+      // Completing sector 1, starting sector 2
+      currentLapSector1Time = crossingTime - currentSectorStartTime;
+      currentSector = 2;
+      currentSectorStartTime = crossingTime;
+
+      debug(F("Sector 1 Time: "));
+      debug(currentLapSector1Time);
+      debug(F(" : "));
+      debugln((double)(currentLapSector1Time/1000.0), 3);
+    } else {
+      // Out of order crossing - invalidate lap
+      debug(F("WARNING: Sector 2 crossed out of order (current sector: "));
+      debug(currentSector);
+      debugln(F(")"));
+      currentSector = 0;  // Invalidate
+    }
+
+  } else if (sectorNumber == 3) {
+    // Crossing sector 3 line
+    if (currentSector == 2) {
+      // Completing sector 2, starting sector 3
+      currentLapSector2Time = crossingTime - currentSectorStartTime;
+      currentSector = 3;
+      currentSectorStartTime = crossingTime;
+
+      debug(F("Sector 2 Time: "));
+      debug(currentLapSector2Time);
+      debug(F(" : "));
+      debugln((double)(currentLapSector2Time/1000.0), 3);
+    } else {
+      // Out of order crossing - invalidate lap
+      debug(F("WARNING: Sector 3 crossed out of order (current sector: "));
+      debug(currentSector);
+      debugln(F(")"));
+      currentSector = 0;  // Invalidate
+    }
+  }
+}
+
+void DovesLapTimer::updateBestSectors() {
+  // Only update if all sectors were completed
+  if (currentLapSector1Time == 0 || currentLapSector2Time == 0 || currentLapSector3Time == 0) {
+    return;
+  }
+
+  // Update sector 1
+  if (bestSector1Time == 0 || currentLapSector1Time < bestSector1Time) {
+    bestSector1Time = currentLapSector1Time;
+    bestSector1LapNumber = laps;
+    debug(F("New best Sector 1: "));
+    debugln(bestSector1Time);
+  }
+
+  // Update sector 2
+  if (bestSector2Time == 0 || currentLapSector2Time < bestSector2Time) {
+    bestSector2Time = currentLapSector2Time;
+    bestSector2LapNumber = laps;
+    debug(F("New best Sector 2: "));
+    debugln(bestSector2Time);
+  }
+
+  // Update sector 3
+  if (bestSector3Time == 0 || currentLapSector3Time < bestSector3Time) {
+    bestSector3Time = currentLapSector3Time;
+    bestSector3LapNumber = laps;
+    debug(F("New best Sector 3: "));
+    debugln(bestSector3Time);
+  }
+}
+
+bool DovesLapTimer::checkSectorLine(double currentLat, double currentLng, double pointALat, double pointALng, double pointBLat, double pointBLng, bool& crossingFlag, int sectorNumber) {
+  double distToLine = INFINITY;
+
+  // Same logic as checkStartFinish but for sector lines
+  if (crossingFlag || insideLineThreshold(currentLat, currentLng, pointALat, pointALng, pointBLat, pointBLng)) {
+    distToLine = pointLineSegmentDistance(currentLat, currentLng, pointALat, pointALng, pointBLat, pointBLng);
+  }
+
+  if (crossingFlag) {
+    // Check if we've moved out of the threshold area
+    if (distToLine > crossingThresholdMeters + 1) {
+      debug(F("Sector "));
+      debug(sectorNumber);
+      debugln(F(" crossed, calculating..."));
+
+      crossingFlag = false;
+
+      // Interpolate the crossing point and its time
+      double crossingLat, crossingLng, crossingOdometer = 0.00;
+      unsigned long crossingTime = 0;
+      interpolateCrossingPoint(crossingLat, crossingLng, crossingTime, crossingOdometer, pointALat, pointALng, pointBLat, pointBLng);
+
+      if (crossingTime != 0 && raceStarted) {
+        debug(F("Sector "));
+        debug(sectorNumber);
+        debug(F(" crossingTime: "));
+        debugln(crossingTime);
+
+        // Handle the sector crossing
+        handleLineCrossing(crossingTime, sectorNumber);
+      }
+
+      // Reset the crossingPointBuffer index and full status
+      crossingPointBufferIndex = 0;
+      crossingPointBufferFull = false;
+      memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
+    } else {
+      // Update the crossingPointBuffer with the current GPS fix
+      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
+      if (crossingPointBufferIndex == 0) {
+        crossingPointBufferFull = true;
+      }
+
+      debug(F("Sector "));
+      debug(sectorNumber);
+      debug(F(" distToLine: "));
+      debug(distToLine);
+      debug(F(" | buffering index["));
+      debug(crossingPointBufferIndex);
+      debugln(F("]"));
+    }
+  } else {
+    if (distToLine < crossingThresholdMeters) {
+      debug(F("Entering Sector "));
+      debug(sectorNumber);
+      debugln(F(" crossing zone"));
+      crossingFlag = true;
+    }
+  }
+
+  // Return true if near or crossing the line
+  return crossingFlag || distToLine < crossingThresholdMeters;
+}
+
 /////////// getters and setters
 
 void DovesLapTimer::reset() {
@@ -475,12 +700,27 @@ void DovesLapTimer::reset() {
   bestLapNumber = 0;
   laps = 0;
 
+  // reset sector timing state
+  currentSector = 0;
+  currentSectorStartTime = 0;
+  crossingSector2 = false;
+  crossingSector3 = false;
+  currentLapSector1Time = 0;
+  currentLapSector2Time = 0;
+  currentLapSector3Time = 0;
+  bestSector1Time = 0;
+  bestSector2Time = 0;
+  bestSector3Time = 0;
+  bestSector1LapNumber = 0;
+  bestSector2LapNumber = 0;
+  bestSector3LapNumber = 0;
+
   // reset odometer?
   totalDistanceTraveled = 0;
   posistionPrevLat = 0;
   posistionPrevLng = 0;
   posistionPrevAlt = 0;
-  
+
   // Reset the crossingPointBuffer index and full status
   crossing = false;
   crossingPointBufferIndex = 0;
@@ -493,6 +733,20 @@ void DovesLapTimer::setStartFinishLine(double pointALat, double pointALng, doubl
   startFinishPointALng = pointALng;
   startFinishPointBLat = pointBLat;
   startFinishPointBLng = pointBLng;
+}
+void DovesLapTimer::setSector2Line(double pointALat, double pointALng, double pointBLat, double pointBLng) {
+  sector2PointALat = pointALat;
+  sector2PointALng = pointALng;
+  sector2PointBLat = pointBLat;
+  sector2PointBLng = pointBLng;
+  sector2LineConfigured = true;
+}
+void DovesLapTimer::setSector3Line(double pointALat, double pointALng, double pointBLat, double pointBLng) {
+  sector3PointALat = pointALat;
+  sector3PointALng = pointALng;
+  sector3PointBLat = pointBLat;
+  sector3PointBLng = pointBLng;
+  sector3LineConfigured = true;
 }
 void DovesLapTimer::updateCurrentTime(unsigned long currentTimeMilliseconds) {
   millisecondsSinceMidnight = currentTimeMilliseconds;
@@ -560,5 +814,48 @@ float DovesLapTimer::getPaceDifference() const {
   // Calculate the pace difference
   float paceDiff = currentLapPace - bestLapPace;
 
-  return paceDiff;  
+  return paceDiff;
+}
+
+/////////// sector timing getters
+
+unsigned long DovesLapTimer::getBestSector1Time() const {
+  return bestSector1Time;
+}
+unsigned long DovesLapTimer::getBestSector2Time() const {
+  return bestSector2Time;
+}
+unsigned long DovesLapTimer::getBestSector3Time() const {
+  return bestSector3Time;
+}
+unsigned long DovesLapTimer::getCurrentLapSector1Time() const {
+  return currentLapSector1Time;
+}
+unsigned long DovesLapTimer::getCurrentLapSector2Time() const {
+  return currentLapSector2Time;
+}
+unsigned long DovesLapTimer::getCurrentLapSector3Time() const {
+  return currentLapSector3Time;
+}
+unsigned long DovesLapTimer::getOptimalLapTime() const {
+  // Only return optimal lap if all sectors have been recorded
+  if (bestSector1Time == 0 || bestSector2Time == 0 || bestSector3Time == 0) {
+    return 0;
+  }
+  return bestSector1Time + bestSector2Time + bestSector3Time;
+}
+int DovesLapTimer::getBestSector1LapNumber() const {
+  return bestSector1LapNumber;
+}
+int DovesLapTimer::getBestSector2LapNumber() const {
+  return bestSector2LapNumber;
+}
+int DovesLapTimer::getBestSector3LapNumber() const {
+  return bestSector3LapNumber;
+}
+int DovesLapTimer::getCurrentSector() const {
+  return currentSector;
+}
+bool DovesLapTimer::areSectorLinesConfigured() const {
+  return sector2LineConfigured && sector3LineConfigured;
 }

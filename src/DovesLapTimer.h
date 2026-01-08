@@ -156,6 +156,24 @@ public:
    */
   void setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng);
   /**
+   * @brief Sets the sector 2 line using two points (A and B).
+   *
+   * @param pointALat Latitude of point A in decimal degrees.
+   * @param pointALng Longitude of point A in decimal degrees.
+   * @param pointBLat Latitude of point B in decimal degrees.
+   * @param pointBLng Longitude of point B in decimal degrees.
+   */
+  void setSector2Line(double pointALat, double pointALng, double pointBLat, double pointBLng);
+  /**
+   * @brief Sets the sector 3 line using two points (A and B).
+   *
+   * @param pointALat Latitude of point A in decimal degrees.
+   * @param pointALng Longitude of point A in decimal degrees.
+   * @param pointBLat Latitude of point B in decimal degrees.
+   * @param pointBLng Longitude of point B in decimal degrees.
+   */
+  void setSector3Line(double pointALat, double pointALng, double pointBLat, double pointBLng);
+  /**
    * @brief Updates the current GPS time since midnight.
    *
    * @param currentTimeMilliseconds The current time in milliseconds.
@@ -258,6 +276,82 @@ public:
    */
   float getPaceDifference() const;
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Sector timing methods
+
+  /**
+   * @brief Gets the best sector 1 time.
+   *
+   * @return The best sector 1 time in milliseconds, or 0 if no valid sector 1 time recorded.
+   */
+  unsigned long getBestSector1Time() const;
+  /**
+   * @brief Gets the best sector 2 time.
+   *
+   * @return The best sector 2 time in milliseconds, or 0 if no valid sector 2 time recorded.
+   */
+  unsigned long getBestSector2Time() const;
+  /**
+   * @brief Gets the best sector 3 time.
+   *
+   * @return The best sector 3 time in milliseconds, or 0 if no valid sector 3 time recorded.
+   */
+  unsigned long getBestSector3Time() const;
+  /**
+   * @brief Gets the current lap sector 1 time.
+   *
+   * @return The current lap sector 1 time in milliseconds, or 0 if sector 1 not yet completed.
+   */
+  unsigned long getCurrentLapSector1Time() const;
+  /**
+   * @brief Gets the current lap sector 2 time.
+   *
+   * @return The current lap sector 2 time in milliseconds, or 0 if sector 2 not yet completed.
+   */
+  unsigned long getCurrentLapSector2Time() const;
+  /**
+   * @brief Gets the current lap sector 3 time.
+   *
+   * @return The current lap sector 3 time in milliseconds, or 0 if sector 3 not yet completed.
+   */
+  unsigned long getCurrentLapSector3Time() const;
+  /**
+   * @brief Gets the optimal lap time calculated from best sector times.
+   *
+   * @return The sum of best sector 1, 2, and 3 times in milliseconds, or 0 if sectors not configured.
+   */
+  unsigned long getOptimalLapTime() const;
+  /**
+   * @brief Gets the lap number that achieved the best sector 1 time.
+   *
+   * @return The lap number, or 0 if no valid sector 1 time recorded.
+   */
+  int getBestSector1LapNumber() const;
+  /**
+   * @brief Gets the lap number that achieved the best sector 2 time.
+   *
+   * @return The lap number, or 0 if no valid sector 2 time recorded.
+   */
+  int getBestSector2LapNumber() const;
+  /**
+   * @brief Gets the lap number that achieved the best sector 3 time.
+   *
+   * @return The lap number, or 0 if no valid sector 3 time recorded.
+   */
+  int getBestSector3LapNumber() const;
+  /**
+   * @brief Gets the current sector the driver is in.
+   *
+   * @return 0 if race not started, 1/2/3 for current sector.
+   */
+  int getCurrentSector() const;
+  /**
+   * @brief Checks if sector lines are configured.
+   *
+   * @return True if both sector 2 and sector 3 lines are configured, false otherwise.
+   */
+  bool areSectorLinesConfigured() const;
+
 private:
   template<typename... Args>
   void debug_print(Args&&... args) {
@@ -286,6 +380,31 @@ private:
    * @param currentTimeMilliseconds The current time in milliseconds.
    */
   bool checkStartFinish(double currentLat, double currentLng);
+  /**
+   * @brief Checks if the kart is crossing a sector line and handles sector timing.
+   *
+   * @param currentLat Latitude of the current position in decimal degrees.
+   * @param currentLng Longitude of the current position in decimal degrees.
+   * @param pointALat Latitude of sector line point A.
+   * @param pointALng Longitude of sector line point A.
+   * @param pointBLat Latitude of sector line point B.
+   * @param pointBLng Longitude of sector line point B.
+   * @param crossingFlag Reference to the crossing state flag for this line.
+   * @param sectorNumber The sector number (2 or 3) being checked.
+   * @return True if near or crossing the line, false otherwise.
+   */
+  bool checkSectorLine(double currentLat, double currentLng, double pointALat, double pointALng, double pointBLat, double pointBLng, bool& crossingFlag, int sectorNumber);
+  /**
+   * @brief Handles the logic when a line is crossed, updating sector times.
+   *
+   * @param crossingTime The time when the line was crossed.
+   * @param sectorNumber 0 for start/finish, 2 for sector 2, 3 for sector 3.
+   */
+  void handleLineCrossing(unsigned long crossingTime, int sectorNumber);
+  /**
+   * @brief Updates best sector times if current lap sector times are better.
+   */
+  void updateBestSectors();
   /**
    * @brief Catmull-Rom spline interpolation between two points
    *
@@ -344,6 +463,27 @@ private:
   int laps = 0;
   int crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 
+  // Sector timing state
+  int currentSector = 0;  // 0=not started, 1/2/3=in sector
+  unsigned long currentSectorStartTime = 0;
+  bool crossingSector2 = false;
+  bool crossingSector3 = false;
+
+  // Current lap sector times (reset each lap)
+  unsigned long currentLapSector1Time = 0;
+  unsigned long currentLapSector2Time = 0;
+  unsigned long currentLapSector3Time = 0;
+
+  // Best sector times (persistent across laps)
+  unsigned long bestSector1Time = 0;
+  unsigned long bestSector2Time = 0;
+  unsigned long bestSector3Time = 0;
+
+  // Lap numbers that achieved best sectors
+  int bestSector1LapNumber = 0;
+  int bestSector2LapNumber = 0;
+  int bestSector3LapNumber = 0;
+
   float totalDistanceTraveled = 0;
   float posistionPrevAlt = 0.00;
   double posistionPrevLat = 0.00;
@@ -353,6 +493,22 @@ private:
   double startFinishPointALng;
   double startFinishPointBLat;
   double startFinishPointBLng;
+
+  // Sector 2 line coordinates
+  double sector2PointALat;
+  double sector2PointALng;
+  double sector2PointBLat;
+  double sector2PointBLng;
+
+  // Sector 3 line coordinates
+  double sector3PointALat;
+  double sector3PointALng;
+  double sector3PointBLat;
+  double sector3PointBLng;
+
+  // Sector line configuration flags
+  bool sector2LineConfigured = false;
+  bool sector3LineConfigured = false;
 
   // Earth's radius in meters
   const double radiusEarth = 6371.0 * 1000;
