@@ -491,9 +491,9 @@ private:
   int bestSector3LapNumber = 0;
 
   float totalDistanceTraveled = 0;
-  float posistionPrevAlt = 0.00;
-  double posistionPrevLat = 0.00;
-  double posistionPrevLng = 0.00;
+  float positionPrevAlt = 0.00;
+  double positionPrevLat = 0.00;
+  double positionPrevLng = 0.00;
   bool firstPositionReceived = false;  // Explicit flag for first GPS fix detection
 
   double startFinishPointALat;

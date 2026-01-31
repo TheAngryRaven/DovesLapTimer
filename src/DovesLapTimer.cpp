@@ -26,16 +26,16 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   if (firstPositionReceived) {
     // TODO: I think alt is messing up, investigate more... maybe flag?
     double distanceTraveledSinceLastUpdate = this->haversine3D(
-      posistionPrevLat,
-      posistionPrevLng,
-      posistionPrevAlt,
+      positionPrevLat,
+      positionPrevLng,
+      positionPrevAlt,
       currentLat,
       currentLng,
       currentAltitudeMeters
     );
     // double distanceTraveledSinceLastUpdate = this->haversine(
-    //   posistionPrevLat,
-    //   posistionPrevLng,
+    //   positionPrevLat,
+    //   positionPrevLng,
     //   currentLat,
     //   currentLng
     // );
@@ -43,9 +43,9 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   } else {
     firstPositionReceived = true;
   }
-  posistionPrevLat = currentLat;
-  posistionPrevLng = currentLng;
-  posistionPrevAlt = currentAltitudeMeters;
+  positionPrevLat = currentLat;
+  positionPrevLng = currentLng;
+  positionPrevAlt = currentAltitudeMeters;
 
   // update current speed
   currentSpeedkmh = currentSpeedKnots * 1.852;
@@ -771,9 +771,9 @@ void DovesLapTimer::reset() {
 
   // reset odometer and position tracking
   totalDistanceTraveled = 0;
-  posistionPrevLat = 0;
-  posistionPrevLng = 0;
-  posistionPrevAlt = 0;
+  positionPrevLat = 0;
+  positionPrevLng = 0;
+  positionPrevAlt = 0;
   firstPositionReceived = false;
 
   // Reset the crossingPointBuffer index and full status
