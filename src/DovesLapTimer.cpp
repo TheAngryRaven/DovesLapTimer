@@ -255,6 +255,14 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       debugln(F("we are possibly crossing"));
       crossing = true;
       // crossingStartedLineSide = pointOnSideOfLine(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+
+      // Capture this first point - it's important context for Catmull-Rom interpolation
+      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
     }
   }
 
@@ -732,6 +740,14 @@ bool DovesLapTimer::checkSectorLine(double currentLat, double currentLng, double
       debug(sectorNumber);
       debugln(F(" crossing zone"));
       crossingFlag = true;
+
+      // Capture this first point - it's important context for Catmull-Rom interpolation
+      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
     }
   }
 
