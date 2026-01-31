@@ -435,6 +435,7 @@ double DovesLapTimer::interpolateWeight(double distA, double distB, float speedA
 
   return weightedDistA / weightedSum;
 }
+#ifndef DOVESLAPTIMER_FORCE_LINEAR
 double DovesLapTimer::catmullRom(double p0, double p1, double p2, double p3, double t) {
   // Calculate t^2 and t^3
   double t2 = t * t;
@@ -449,6 +450,8 @@ double DovesLapTimer::catmullRom(double p0, double p1, double p2, double p3, dou
   // Calculate and return the interpolated value using the coefficients and powers of t
   return a * t3 + b * t2 + c * t + d;
 }
+#endif // DOVESLAPTIMER_FORCE_LINEAR
+
 void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng) {
   int numPoints = crossingPointBufferFull ? crossingPointBufferSize : crossingPointBufferIndex;
 
@@ -513,9 +516,11 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
       // Perform linear interpolation
       crossingLat = crossingPointBuffer[bestIndexA].lat + t * deltaLat;
       crossingLng = crossingPointBuffer[bestIndexA].lng + t * deltaLon;
-      crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;  
+      crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;
       crossingTime = crossingPointBuffer[bestIndexA].time + t * deltaTime;
-    } else {
+    }
+#ifndef DOVESLAPTIMER_FORCE_LINEAR
+    else {
       // Catmull-Rom spline interpolation requires 4 control points:
       // index0 (before A), index1 (A), index2 (B), index3 (after B)
       // Check bounds: we need bestIndexA >= 1 and bestIndexB <= numPoints - 2
@@ -567,6 +572,7 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
         crossingOdometer = catmullRom(crossingPointBuffer[index0].odometer, crossingPointBuffer[index1].odometer, crossingPointBuffer[index2].odometer, crossingPointBuffer[index3].odometer, t);
       }
     }
+#endif // DOVESLAPTIMER_FORCE_LINEAR
   } else {
     debugln(F("~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~"));
   }
@@ -826,7 +832,12 @@ void DovesLapTimer::forceLinearInterpolation() {
   forceLinear = true;
 }
 void DovesLapTimer::forceCatmullRomInterpolation() {
+#ifdef DOVESLAPTIMER_FORCE_LINEAR
+  // No-op when DOVESLAPTIMER_FORCE_LINEAR is defined at compile time
+  // forceLinear remains true (its default value)
+#else
   forceLinear = false;
+#endif
 }
 bool DovesLapTimer::getRaceStarted() const {
   return raceStarted;

@@ -12,6 +12,17 @@
 #include "ArxTypeTraits.h"
 using TRITYPE = double;
 
+// Compile-time option to force linear interpolation only.
+// Define DOVESLAPTIMER_FORCE_LINEAR before including this header to disable
+// Catmull-Rom spline interpolation entirely. This reduces code size slightly
+// and guarantees linear interpolation is always used.
+//
+// Example usage in your sketch:
+//   #define DOVESLAPTIMER_FORCE_LINEAR
+//   #include <DovesLapTimer.h>
+//
+// #define DOVESLAPTIMER_FORCE_LINEAR
+
 #define CROSSING_LINE_SIDE_NONE -100
 #define CROSSING_LINE_SIDE_A -1
 #define CROSSING_LINE_SIDE_EXACT 0
@@ -193,6 +204,9 @@ public:
    * path curves near the line. Falls back to linear interpolation automatically
    * if insufficient control points are available (crossing detected too early
    * in the buffer).
+   *
+   * @note This function is a no-op if DOVESLAPTIMER_FORCE_LINEAR is defined
+   *       at compile time. In that case, linear interpolation is always used.
    */
   void forceCatmullRomInterpolation();
   /**
