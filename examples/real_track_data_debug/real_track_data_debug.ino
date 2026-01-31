@@ -62,28 +62,28 @@ static int last_processed_line = -1;
  * been processed. If there are no more lines to process, the function
  * returns NULL.
  *
- * @return A pointer to a dynamically allocated string containing the next
- *         NMEA data string from the array, or NULL if there are no more
- *         lines to process. The caller is responsible for freeing the memory
- *         allocated by this function.
+ * @return A pointer to a static buffer containing the next NMEA data string
+ *         from the array, or NULL if there are no more lines to process.
+ *         The buffer is reused on each call, so copy data if needed.
  */
 char *gpsLastFakeNMEA() {
+    // Static buffer to avoid memory allocation - NMEA sentences are max 82 chars
+    static char nmea_buffer[128];
+
     // Check if we've processed all the lines
     if (last_processed_line >= num_gps_logs - 1) {
       return NULL;
     }
-    
+
     // Update the last processed line
     last_processed_line++;
-    
-    // Allocate a new string to hold the NMEA data
-    char* nmea_data = (char*) malloc(strlen(gps_logs[last_processed_line]) + 1);
-    
-    // Copy the NMEA data into the new string
-    strcpy(nmea_data, gps_logs[last_processed_line]);
-    
-    // Return the new string
-    return nmea_data;
+
+    // Copy the NMEA data into the static buffer (safely)
+    strncpy(nmea_buffer, gps_logs[last_processed_line], sizeof(nmea_buffer) - 1);
+    nmea_buffer[sizeof(nmea_buffer) - 1] = '\0';  // Ensure null termination
+
+    // Return the buffer
+    return nmea_buffer;
 }
 
 /**
