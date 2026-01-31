@@ -500,12 +500,20 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   // Make sure we found a valid pair of points
   if (bestSumDistances < crossingThresholdMeters && bestIndexA != -1 && bestIndexB != -1) {
     debugln(F("~~~ VALID CROSSING ~~~"));
-    if (forceLinear) {
-      // Interpolate the crossing point's latitude, longitude, and time using the best pair of points
+
+    // Determine which interpolation method to use
+#ifdef DOVESLAPTIMER_FORCE_LINEAR
+    // Compile-time: always use linear interpolation
+    const bool useLinear = true;
+#else
+    // Runtime: check forceLinear flag
+    const bool useLinear = forceLinear;
+#endif
+
+    if (useLinear) {
+      // Linear interpolation
       double distA = pointLineSegmentDistance(crossingPointBuffer[bestIndexA].lat, crossingPointBuffer[bestIndexA].lng, pointALat, pointALng, pointBLat, pointBLng);
       double distB = pointLineSegmentDistance(crossingPointBuffer[bestIndexB].lat, crossingPointBuffer[bestIndexB].lng, pointALat, pointALng, pointBLat, pointBLng);
-
-      // Compute the interpolation factor based on distance and speed
       double t = interpolateWeight(distA, distB, crossingPointBuffer[bestIndexA].speedKmh, crossingPointBuffer[bestIndexB].speedKmh);
 
       double deltaLat = crossingPointBuffer[bestIndexB].lat - crossingPointBuffer[bestIndexA].lat;
@@ -513,7 +521,6 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
       double deltaOdometer = crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer;
       double deltaTime = crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time;
 
-      // Perform linear interpolation
       crossingLat = crossingPointBuffer[bestIndexA].lat + t * deltaLat;
       crossingLng = crossingPointBuffer[bestIndexA].lng + t * deltaLon;
       crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;
