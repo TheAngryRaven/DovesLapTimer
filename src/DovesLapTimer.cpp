@@ -22,31 +22,30 @@ DovesLapTimer::DovesLapTimer(double crossingThresholdMeters, Stream *debugSerial
 }
 
 int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots) {
-  // Update Odometer
-  if (
-    posistionPrevLat != 0.00 &&
-    posistionPrevLng != 0.00
-  ) {
+  // Update Odometer - only calculate distance if we have a previous position
+  if (firstPositionReceived) {
     // TODO: I think alt is messing up, investigate more... maybe flag?
     double distanceTraveledSinceLastUpdate = this->haversine3D(
-      posistionPrevLat,
-      posistionPrevLng,
-      posistionPrevAlt,
+      positionPrevLat,
+      positionPrevLng,
+      positionPrevAlt,
       currentLat,
       currentLng,
       currentAltitudeMeters
     );
     // double distanceTraveledSinceLastUpdate = this->haversine(
-    //   posistionPrevLat,
-    //   posistionPrevLng,
+    //   positionPrevLat,
+    //   positionPrevLng,
     //   currentLat,
     //   currentLng
     // );
     totalDistanceTraveled += distanceTraveledSinceLastUpdate;
+  } else {
+    firstPositionReceived = true;
   }
-  posistionPrevLat = currentLat;
-  posistionPrevLng = currentLng;
-  posistionPrevAlt = currentAltitudeMeters;
+  positionPrevLat = currentLat;
+  positionPrevLng = currentLng;
+  positionPrevAlt = currentAltitudeMeters;
 
   // update current speed
   currentSpeedkmh = currentSpeedKnots * 1.852;
@@ -163,7 +162,7 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 
       // Interpolate the crossing point and its time
-      double crossingLat, crossingLng, crossingOdometer = 0.00;
+      double crossingLat = 0.0, crossingLng = 0.0, crossingOdometer = 0.0;
       unsigned long crossingTime = 0;
       interpolateCrossingPoint(crossingLat, crossingLng, crossingTime, crossingOdometer, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
 
@@ -256,6 +255,14 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       debugln(F("we are possibly crossing"));
       crossing = true;
       // crossingStartedLineSide = pointOnSideOfLine(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+
+      // Capture this first point - it's important context for Catmull-Rom interpolation
+      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
     }
   }
 
@@ -344,8 +351,10 @@ int DovesLapTimer::pointOnSideOfLine(double driverLat, double driverLng, double 
 double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, double startX, double startY, double endX, double endY) {
   double segmentLengthSquared = pow(endX - startX, 2) + pow(endY - startY, 2);
 
-  if (segmentLengthSquared == 0) {
-    // The line segment is actually a point
+  // Use epsilon comparison for floating-point near-zero check
+  // This handles degenerate line segments (start == end)
+  if (segmentLengthSquared < 1e-12) {
+    // The line segment is actually a point (or nearly so)
     return haversine(pointX, pointY, startX, startY);
   }
 
@@ -403,9 +412,28 @@ double DovesLapTimer::haversine3D(double prevLat, double prevLng, double prevAlt
 /////////// private functions
 
 double DovesLapTimer::interpolateWeight(double distA, double distB, float speedA, float speedB) {
+  // Guard against division by zero - if either speed is essentially zero,
+  // fall back to pure distance-based weighting
+  const float minSpeed = 0.001f;  // ~0.0005 knots, effectively stationary
+  if (speedA < minSpeed || speedB < minSpeed) {
+    // Pure distance-based interpolation: weight is proportion of distA to total
+    double totalDist = distA + distB;
+    if (totalDist < 1e-9) {
+      return 0.5;  // Both distances zero, use midpoint
+    }
+    return distA / totalDist;
+  }
+
   double weightedDistA = distA / speedA;
   double weightedDistB = distB / speedB;
-  return weightedDistA / (weightedDistA + weightedDistB);
+
+  // Guard against sum being zero (shouldn't happen with above checks, but defensive)
+  double weightedSum = weightedDistA + weightedDistB;
+  if (weightedSum < 1e-9) {
+    return 0.5;
+  }
+
+  return weightedDistA / weightedSum;
 }
 double DovesLapTimer::catmullRom(double p0, double p1, double p2, double p3, double t) {
   // Calculate t^2 and t^3
@@ -421,6 +449,7 @@ double DovesLapTimer::catmullRom(double p0, double p1, double p2, double p3, dou
   // Calculate and return the interpolated value using the coefficients and powers of t
   return a * t3 + b * t2 + c * t + d;
 }
+
 void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng) {
   int numPoints = crossingPointBufferFull ? crossingPointBufferSize : crossingPointBufferIndex;
 
@@ -469,41 +498,73 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   // Make sure we found a valid pair of points
   if (bestSumDistances < crossingThresholdMeters && bestIndexA != -1 && bestIndexB != -1) {
     debugln(F("~~~ VALID CROSSING ~~~"));
+
     if (forceLinear) {
-      // Interpolate the crossing point's latitude, longitude, and time using the best pair of points
+      // Linear interpolation
       double distA = pointLineSegmentDistance(crossingPointBuffer[bestIndexA].lat, crossingPointBuffer[bestIndexA].lng, pointALat, pointALng, pointBLat, pointBLng);
       double distB = pointLineSegmentDistance(crossingPointBuffer[bestIndexB].lat, crossingPointBuffer[bestIndexB].lng, pointALat, pointALng, pointBLat, pointBLng);
-
-      // Compute the interpolation factor based on distance and speed
       double t = interpolateWeight(distA, distB, crossingPointBuffer[bestIndexA].speedKmh, crossingPointBuffer[bestIndexB].speedKmh);
 
-      float deltaLat = crossingPointBuffer[bestIndexB].lat - crossingPointBuffer[bestIndexA].lat;
-      float deltaLon = crossingPointBuffer[bestIndexB].lng - crossingPointBuffer[bestIndexA].lng;
-      float deltaOdometer = crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer;
-      float deltaTime = crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time;
+      double deltaLat = crossingPointBuffer[bestIndexB].lat - crossingPointBuffer[bestIndexA].lat;
+      double deltaLon = crossingPointBuffer[bestIndexB].lng - crossingPointBuffer[bestIndexA].lng;
+      double deltaOdometer = crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer;
+      double deltaTime = crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time;
 
-      // Preform linear interpolation
       crossingLat = crossingPointBuffer[bestIndexA].lat + t * deltaLat;
       crossingLng = crossingPointBuffer[bestIndexA].lng + t * deltaLon;
-      crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;  
+      crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;
       crossingTime = crossingPointBuffer[bestIndexA].time + t * deltaTime;
     } else {
-      // Define the four control points for Catmull-Rom spline interpolation
-      int index0 = bestIndexA - 1;
-      int index1 = bestIndexA;
-      int index2 = bestIndexB;
-      int index3 = bestIndexB + 1;
+      // Catmull-Rom spline interpolation requires 4 control points:
+      // index0 (before A), index1 (A), index2 (B), index3 (after B)
+      // Check bounds: we need bestIndexA >= 1 and bestIndexB <= numPoints - 2
+      bool canUseCatmullRom = (bestIndexA >= 1) && (bestIndexB <= numPoints - 2);
 
-      // Compute the interpolation factor based on distance
-      double distA = pointLineSegmentDistance(crossingPointBuffer[index1].lat, crossingPointBuffer[index1].lng, pointALat, pointALng, pointBLat, pointBLng);
-      double distB = pointLineSegmentDistance(crossingPointBuffer[index2].lat, crossingPointBuffer[index2].lng, pointALat, pointALng, pointBLat, pointBLng);
-      double t = interpolateWeight(distA, distB, crossingPointBuffer[index1].speedKmh, crossingPointBuffer[index2].speedKmh);
+      if (!canUseCatmullRom) {
+        // Not enough points for Catmull-Rom, fall back to linear interpolation
+        debugln(F("Catmull-Rom: insufficient control points, using linear fallback"));
 
-      // Perform Catmull-Rom spline interpolation for latitude, longitude, time, and odometer
-      crossingLat = catmullRom(crossingPointBuffer[index0].lat, crossingPointBuffer[index1].lat, crossingPointBuffer[index2].lat, crossingPointBuffer[index3].lat, t);
-      crossingLng = catmullRom(crossingPointBuffer[index0].lng, crossingPointBuffer[index1].lng, crossingPointBuffer[index2].lng, crossingPointBuffer[index3].lng, t);
-      crossingTime = catmullRom(crossingPointBuffer[index0].time, crossingPointBuffer[index1].time, crossingPointBuffer[index2].time, crossingPointBuffer[index3].time, t);
-      crossingOdometer = catmullRom(crossingPointBuffer[index0].odometer, crossingPointBuffer[index1].odometer, crossingPointBuffer[index2].odometer, crossingPointBuffer[index3].odometer, t);
+        double distA = pointLineSegmentDistance(crossingPointBuffer[bestIndexA].lat, crossingPointBuffer[bestIndexA].lng, pointALat, pointALng, pointBLat, pointBLng);
+        double distB = pointLineSegmentDistance(crossingPointBuffer[bestIndexB].lat, crossingPointBuffer[bestIndexB].lng, pointALat, pointALng, pointBLat, pointBLng);
+        double t = interpolateWeight(distA, distB, crossingPointBuffer[bestIndexA].speedKmh, crossingPointBuffer[bestIndexB].speedKmh);
+
+        double deltaLat = crossingPointBuffer[bestIndexB].lat - crossingPointBuffer[bestIndexA].lat;
+        double deltaLon = crossingPointBuffer[bestIndexB].lng - crossingPointBuffer[bestIndexA].lng;
+        double deltaOdometer = crossingPointBuffer[bestIndexB].odometer - crossingPointBuffer[bestIndexA].odometer;
+        double deltaTime = crossingPointBuffer[bestIndexB].time - crossingPointBuffer[bestIndexA].time;
+
+        crossingLat = crossingPointBuffer[bestIndexA].lat + t * deltaLat;
+        crossingLng = crossingPointBuffer[bestIndexA].lng + t * deltaLon;
+        crossingOdometer = crossingPointBuffer[bestIndexA].odometer + t * deltaOdometer;
+        crossingTime = crossingPointBuffer[bestIndexA].time + t * deltaTime;
+      } else {
+        // We have 4 valid control points for Catmull-Rom
+        int index0 = bestIndexA - 1;
+        int index1 = bestIndexA;
+        int index2 = bestIndexB;
+        int index3 = bestIndexB + 1;
+
+        debugln(F("Catmull-Rom: using spline interpolation"));
+        debug(F("  indices: "));
+        debug(index0);
+        debug(F(", "));
+        debug(index1);
+        debug(F(", "));
+        debug(index2);
+        debug(F(", "));
+        debugln(index3);
+
+        // Compute the interpolation factor based on distance and speed
+        double distA = pointLineSegmentDistance(crossingPointBuffer[index1].lat, crossingPointBuffer[index1].lng, pointALat, pointALng, pointBLat, pointBLng);
+        double distB = pointLineSegmentDistance(crossingPointBuffer[index2].lat, crossingPointBuffer[index2].lng, pointALat, pointALng, pointBLat, pointBLng);
+        double t = interpolateWeight(distA, distB, crossingPointBuffer[index1].speedKmh, crossingPointBuffer[index2].speedKmh);
+
+        // Perform Catmull-Rom spline interpolation for latitude, longitude, time, and odometer
+        crossingLat = catmullRom(crossingPointBuffer[index0].lat, crossingPointBuffer[index1].lat, crossingPointBuffer[index2].lat, crossingPointBuffer[index3].lat, t);
+        crossingLng = catmullRom(crossingPointBuffer[index0].lng, crossingPointBuffer[index1].lng, crossingPointBuffer[index2].lng, crossingPointBuffer[index3].lng, t);
+        crossingTime = catmullRom(crossingPointBuffer[index0].time, crossingPointBuffer[index1].time, crossingPointBuffer[index2].time, crossingPointBuffer[index3].time, t);
+        crossingOdometer = catmullRom(crossingPointBuffer[index0].odometer, crossingPointBuffer[index1].odometer, crossingPointBuffer[index2].odometer, crossingPointBuffer[index3].odometer, t);
+      }
     }
   } else {
     debugln(F("~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~"));
@@ -633,7 +694,7 @@ bool DovesLapTimer::checkSectorLine(double currentLat, double currentLng, double
       crossingFlag = false;
 
       // Interpolate the crossing point and its time
-      double crossingLat, crossingLng, crossingOdometer = 0.00;
+      double crossingLat = 0.0, crossingLng = 0.0, crossingOdometer = 0.0;
       unsigned long crossingTime = 0;
       interpolateCrossingPoint(crossingLat, crossingLng, crossingTime, crossingOdometer, pointALat, pointALng, pointBLat, pointBLng);
 
@@ -678,6 +739,14 @@ bool DovesLapTimer::checkSectorLine(double currentLat, double currentLng, double
       debug(sectorNumber);
       debugln(F(" crossing zone"));
       crossingFlag = true;
+
+      // Capture this first point - it's important context for Catmull-Rom interpolation
+      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
     }
   }
 
@@ -715,11 +784,12 @@ void DovesLapTimer::reset() {
   bestSector2LapNumber = 0;
   bestSector3LapNumber = 0;
 
-  // reset odometer?
+  // reset odometer and position tracking
   totalDistanceTraveled = 0;
-  posistionPrevLat = 0;
-  posistionPrevLng = 0;
-  posistionPrevAlt = 0;
+  positionPrevLat = 0;
+  positionPrevLng = 0;
+  positionPrevAlt = 0;
+  firstPositionReceived = false;
 
   // Reset the crossingPointBuffer index and full status
   crossing = false;
@@ -755,9 +825,7 @@ void DovesLapTimer::forceLinearInterpolation() {
   forceLinear = true;
 }
 void DovesLapTimer::forceCatmullRomInterpolation() {
-  // forceLinear = false;
-  // currently bugged, sorry
-  forceLinear = true;
+  forceLinear = false;
 }
 bool DovesLapTimer::getRaceStarted() const {
   return raceStarted;

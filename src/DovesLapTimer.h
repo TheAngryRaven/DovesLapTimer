@@ -186,7 +186,13 @@ public:
    */
   void forceLinearInterpolation();
   /**
-   * @brief forces catmullrom interpolation when checking crossing line
+   * @brief Forces Catmull-Rom spline interpolation when checking crossing line.
+   *
+   * Catmull-Rom interpolation uses 4 control points to create a smooth curve,
+   * which can provide more accurate crossing time calculation when the vehicle
+   * path curves near the line. Falls back to linear interpolation automatically
+   * if insufficient control points are available (crossing detected too early
+   * in the buffer).
    */
   void forceCatmullRomInterpolation();
   /**
@@ -485,9 +491,10 @@ private:
   int bestSector3LapNumber = 0;
 
   float totalDistanceTraveled = 0;
-  float posistionPrevAlt = 0.00;
-  double posistionPrevLat = 0.00;
-  double posistionPrevLng = 0.00;
+  float positionPrevAlt = 0.00;
+  double positionPrevLat = 0.00;
+  double positionPrevLng = 0.00;
+  bool firstPositionReceived = false;  // Explicit flag for first GPS fix detection
 
   double startFinishPointALat;
   double startFinishPointALng;
