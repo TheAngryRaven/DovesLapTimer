@@ -2,8 +2,9 @@
 Full datalogger + STL case files dropped over at [https://github.com/TheAngryRaven/DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (no readme yet)
 
 Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer) (100% vibe code)
+
 # Doves GPS Lap Timer
-Library for Arduino for creating mostly accurate lap-timings using GPS data.
+Library for Arduino for creating damned accurate lap-timings using GPS data, on par with other commercial solutions.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, using the 4 points closest to the line, creates a catmullrom spline to interpolate the exact crossing time.
 
@@ -65,16 +66,7 @@ While this is technially an arduino library, this needs a device with a large am
   * Current lap sector times
   * Optimal lap time (sum of best sectors)
   * Track which lap achieved best sector times
-
-### MyLaps (magnetic) Vs DovesLapTimer example
-
-![MyLaps vs DovesLapTimer](images/magnetic-doveslaptimer-01.png)
-
-## Planned Functions
 * List lap times
-
-Yea let me be real here, I just want the screen to flash when I have a good sector, and check my times in qualifying before the rental races.
-If you want literally any other feature, use the [RaceChrono Android   | iPhone App](https://racechrono.com/) or make it yourself and submit a pull-request.
 
 ## API
 See the source code, specifically the [DovesLapTimer.h](src/DovesLapTimer.h) file.
@@ -207,7 +199,6 @@ Now if you want any running information,  you have the following...
     * MyLaps    : 1:08:807 (magnetic/official)
     * DovesTimer: 1:08:748 (LINEAR)
     * DovesTimer: 1:08.745 (CATMULLROM)
-    * RaceChrono: 1:08:630 (GPS Android App)
 
 ## License
 
