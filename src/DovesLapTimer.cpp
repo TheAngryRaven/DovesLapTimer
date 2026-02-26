@@ -1,8 +1,8 @@
 /**
- * Originally intended to use for gokarting this library offers a simple way to get basic lap timing information from a GPS based system.
+ * GPS-based lap timing library for go-kart and racing applications.
  * This library does NOT interface with your GPS, simply feed it data and check the state.
- * Right now this only offers a single split time around the "start/finish" and would not work for many other purposes without modification.
- * 
+ * Supports start/finish line detection, 3-sector split timing, pace comparison, and distance tracking.
+ *
  * The development of this library has been overseen, and all documentation has been generated using chatGPT4.
  */
 
@@ -399,10 +399,10 @@ double DovesLapTimer::haversine(double lat1, double lon1, double lat2, double lo
   return distance;
 }
 
-double DovesLapTimer::haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double curentLng, double currentAlt) {
+double DovesLapTimer::haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double currentLng, double currentAlt) {
   double distWithAltitude = 0;
   if (prevLat != 0 && prevLng != 0) {
-    double dist = haversine(prevLat, prevLng, currentLat, curentLng);
+    double dist = haversine(prevLat, prevLng, currentLat, currentLng);
     double altDiff = currentAlt - prevAlt;
     distWithAltitude = sqrt(dist * dist + altDiff * altDiff);
   }
