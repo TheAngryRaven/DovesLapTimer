@@ -378,8 +378,6 @@ double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, dou
 }
 
 double DovesLapTimer::haversine(double lat1, double lon1, double lat2, double lon2) {
-  double radiusEarth = 6371000; // Earth's radius in meters
-
   // Convert latitude and longitude from degrees to radians
   double lat1Rad = radians(lat1);
   double lon1Rad = radians(lon1);
@@ -400,13 +398,9 @@ double DovesLapTimer::haversine(double lat1, double lon1, double lat2, double lo
 }
 
 double DovesLapTimer::haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double currentLng, double currentAlt) {
-  double distWithAltitude = 0;
-  if (prevLat != 0 && prevLng != 0) {
-    double dist = haversine(prevLat, prevLng, currentLat, currentLng);
-    double altDiff = currentAlt - prevAlt;
-    distWithAltitude = sqrt(dist * dist + altDiff * altDiff);
-  }
-  return distWithAltitude;
+  double dist = haversine(prevLat, prevLng, currentLat, currentLng);
+  double altDiff = currentAlt - prevAlt;
+  return sqrt(dist * dist + altDiff * altDiff);
 }
 
 /////////// private functions
@@ -456,7 +450,7 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   // Variables to store the best pair of points
   int bestIndexA = -1;
   int bestIndexB = -1;
-  double bestSumDistances = 100000.0;
+  double bestSumDistances = INFINITY;
 
   // Iterate through the crossingPointBuffer, comparing the sum of distances from the start/finish line of each pair of consecutive points
   for (int i = 0; i < numPoints - 1; i++) {
@@ -783,6 +777,9 @@ void DovesLapTimer::reset() {
   bestSector1LapNumber = 0;
   bestSector2LapNumber = 0;
   bestSector3LapNumber = 0;
+
+  // reset time tracking
+  millisecondsSinceMidnight = 0;
 
   // reset odometer and position tracking
   totalDistanceTraveled = 0;

@@ -384,7 +384,7 @@ void displayStats() {
   // display.print(" LLD:");
   // display.print(lapTimer.getLastLapDistance());
   display.print("BLP:");
-  display.print(lapTimer.getBestLapTime() / lapTimer.getBestLapDistance());
+  display.print(lapTimer.getBestLapDistance() > 0 ? lapTimer.getBestLapTime() / lapTimer.getBestLapDistance() : 0);
   // display.print(" CLP:");
   // display.print(lapTimer.getCurrentLapTime() / lapTimer.getCurrentLapDistance());
   display.print(" MPH:");
