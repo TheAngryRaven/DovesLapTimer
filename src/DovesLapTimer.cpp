@@ -51,14 +51,16 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   currentSpeedkmh = currentSpeedKnots * 1.852;
 
   // run calculations for each crossing-line
-  // Priority order: check whichever line we're currently crossing first,
-  // then check others. Only one line can be "crossing" at a time due to shared buffer.
+  // Only one line can be "crossing" at a time due to shared buffer.
+  // Mutual exclusion: skip start/finish if a sector crossing is active, and vice versa.
 
   bool nearAnyLine = false;
 
-  // Always check start/finish line
-  if (this->checkStartFinish(currentLat, currentLng)) {
-    nearAnyLine = true;
+  // Check start/finish line - skip if a sector crossing is already in progress
+  if (crossing || (!crossingSector2 && !crossingSector3)) {
+    if (this->checkStartFinish(currentLat, currentLng)) {
+      nearAnyLine = true;
+    }
   }
 
   // Check sector lines if configured and not currently crossing start/finish

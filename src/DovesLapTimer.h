@@ -452,7 +452,7 @@ private:
 
   Stream *_serial;
   
-  unsigned long millisecondsSinceMidnight = -1;
+  unsigned long millisecondsSinceMidnight = 0;
   // Timing variables
   double crossingThresholdMeters;
   bool raceStarted = false;

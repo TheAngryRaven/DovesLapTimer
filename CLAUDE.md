@@ -10,7 +10,7 @@
 **Author**: Michael Champagne (crimsondove)
 **Version**: 3.1.1
 **Repo**: https://github.com/TheAngryRaven/DovesLapTimer
-**License**: LICENSE file contains GPL v3 (library.properties says MIT - MISMATCH, needs resolution)
+**License**: GPL v3
 **Dependency**: ArxTypeTraits (auto-included by Arduino Library Manager)
 
 The library does NOT interface with GPS hardware directly. You feed it coordinates and time,
@@ -143,10 +143,10 @@ DovesLapTimer/
 2. **Altitude messing up distance**: `loop()` line 27 has TODO: "I think alt is messing up, investigate more... maybe flag?"
 3. **Early abort bug**: checkStartFinish line 148-149 TODO about aborting early causing re-check immediately
 4. **`checkStartFinish` portability**: Line 106 TODO to make more portable for split timing
-5. **License mismatch**: GPL v3 in LICENSE file vs MIT in library.properties
-6. **Header comment outdated**: Says "single split time" but library supports 3 sectors now
-7. **No keywords.txt**: Missing for Arduino IDE syntax highlighting
-8. **No .gitignore**: Missing
+5. ~~**License mismatch**~~: Resolved - GPL v3, library.properties updated
+6. ~~**Header comment outdated**~~: Fixed - updated to mention 3-sector timing
+7. ~~**No keywords.txt**~~: Added
+8. ~~**No .gitignore**~~: Added
 
 ## Supported Hardware
 
