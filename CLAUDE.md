@@ -139,7 +139,7 @@ DovesLapTimer/
 
 ## Known Issues & TODOs (from code comments)
 
-1. **Catmull-Rom interpolation bug**: basic_oled_example forces linear with comment "CURRENTLY REQUIRED: BUG IN CATMULROM INTERPOLATION METHOD"
+1. ~~**Catmull-Rom interpolation bug**~~: Fixed - spline now only used for lat/lng (not time/odometer), and previous GPS fix inserted as pre-crossing control point
 2. **Altitude messing up distance**: `loop()` line 27 has TODO: "I think alt is messing up, investigate more... maybe flag?"
 3. **Early abort bug**: checkStartFinish line 148-149 TODO about aborting early causing re-check immediately
 4. **`checkStartFinish` portability**: Line 106 TODO to make more portable for split timing

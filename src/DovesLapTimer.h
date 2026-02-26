@@ -496,6 +496,14 @@ private:
   double positionPrevLng = 0.00;
   bool firstPositionReceived = false;  // Explicit flag for first GPS fix detection
 
+  // Previous GPS fix snapshot (used as Catmull-Rom pre-crossing control point)
+  double prevFixLat = 0;
+  double prevFixLng = 0;
+  unsigned long prevFixTime = 0;
+  float prevFixOdometer = 0;
+  float prevFixSpeedKmh = 0;
+  bool hasPrevFix = false;
+
   double startFinishPointALat;
   double startFinishPointALng;
   double startFinishPointBLat;
