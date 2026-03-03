@@ -1,0 +1,64 @@
+#######################################
+# Syntax Coloring Map For DovesLapTimer
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+DovesLapTimer	KEYWORD1
+crossingPointBufferEntry	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+loop	KEYWORD2
+setStartFinishLine	KEYWORD2
+setSector2Line	KEYWORD2
+setSector3Line	KEYWORD2
+updateCurrentTime	KEYWORD2
+forceLinearInterpolation	KEYWORD2
+forceCatmullRomInterpolation	KEYWORD2
+reset	KEYWORD2
+getRaceStarted	KEYWORD2
+getCrossing	KEYWORD2
+getCurrentLapStartTime	KEYWORD2
+getCurrentLapTime	KEYWORD2
+getLastLapTime	KEYWORD2
+getBestLapTime	KEYWORD2
+getCurrentLapOdometerStart	KEYWORD2
+getCurrentLapDistance	KEYWORD2
+getLastLapDistance	KEYWORD2
+getBestLapDistance	KEYWORD2
+getTotalDistanceTraveled	KEYWORD2
+getBestLapNumber	KEYWORD2
+getLaps	KEYWORD2
+getPaceDifference	KEYWORD2
+getBestSector1Time	KEYWORD2
+getBestSector2Time	KEYWORD2
+getBestSector3Time	KEYWORD2
+getCurrentLapSector1Time	KEYWORD2
+getCurrentLapSector2Time	KEYWORD2
+getCurrentLapSector3Time	KEYWORD2
+getOptimalLapTime	KEYWORD2
+getBestSector1LapNumber	KEYWORD2
+getBestSector2LapNumber	KEYWORD2
+getBestSector3LapNumber	KEYWORD2
+getCurrentSector	KEYWORD2
+areSectorLinesConfigured	KEYWORD2
+insideLineThreshold	KEYWORD2
+pointLineSegmentDistance	KEYWORD2
+haversine	KEYWORD2
+haversine3D	KEYWORD2
+isObtuseTriangle	KEYWORD2
+pointOnSideOfLine	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+CROSSING_LINE_SIDE_NONE	LITERAL1
+CROSSING_LINE_SIDE_A	LITERAL1
+CROSSING_LINE_SIDE_EXACT	LITERAL1
+CROSSING_LINE_SIDE_B	LITERAL1

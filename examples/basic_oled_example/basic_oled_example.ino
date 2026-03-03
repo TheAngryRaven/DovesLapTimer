@@ -70,7 +70,7 @@ int ledState = LOW;
 unsigned long currentMillis;
 
 #include <DovesLapTimer.h>
-// initialize with internal debugger, and or crossingThreshold (default 10)
+// initialize with internal debugger, and or crossingThreshold (default 7)
 // Don't change this unless you know what you're doing
 double crossingThresholdMeters = 7.0;
 // DovesLapTimer lapTimer(crossingThresholdMeters, &DEBUG_SERIAL);
@@ -148,19 +148,18 @@ void gpsLoop() {
     }
 }
 
-#ifndef GPS_CONFIGURATION
-  /**
-   * @brief Sends a GPS configuration command stored in program memory to the GPS module via [GPS_SERIAL].
-   *
-   * This function reads a configuration command from PROGMEM (program memory) and sends it byte by byte to the GPS module using the [GPS_SERIAL] interface.
-   * The function also prints the configuration command in hexadecimal format for debugging purposes.
-   *
-   * @note This function contains blocking code and should be used during setup only.
-   *
-   * @param Progmem_ptr Pointer to the PROGMEM (program memory) containing the GPS configuration command.
-   * @param arraysize Size of the configuration command stored in PROGMEM.
-   */
-  void GPS_SendConfig(const uint8_t *Progmem_ptr, uint8_t arraysize) {
+/**
+ * @brief Sends a GPS configuration command stored in program memory to the GPS module via [GPS_SERIAL].
+ *
+ * This function reads a configuration command from PROGMEM (program memory) and sends it byte by byte to the GPS module using the [GPS_SERIAL] interface.
+ * The function also prints the configuration command in hexadecimal format for debugging purposes.
+ *
+ * @note This function contains blocking code and should be used during setup only.
+ *
+ * @param Progmem_ptr Pointer to the PROGMEM (program memory) containing the GPS configuration command.
+ * @param arraysize Size of the configuration command stored in PROGMEM.
+ */
+void GPS_SendConfig(const uint8_t *Progmem_ptr, uint8_t arraysize) {
     uint8_t byteread, index;
 
     debug(F("GPSSend  "));
@@ -186,218 +185,215 @@ void gpsLoop() {
       GPS_SERIAL.write(byteread);
     }
     delay(200);
+}
+
+void gpsSetup() {
+  // first try serial at 9600 baud
+  GPS_SERIAL.begin(9600);
+  // wait for the GPS to boot
+  delay(2250);
+  if (GPS_SERIAL) {
+    GPS_SendConfig(uart115200NmeaOnly, 28);
+    GPS_SERIAL.end();
   }
 
-  void gpsSetup() {
-    // first try serial at 9600 baud
-    GPS_SERIAL.begin(9600);
-    // wait for the GPS to boot
-    delay(2250);
-    if (GPS_SERIAL) {
-      GPS_SendConfig(uart115200NmeaOnly, 28);
-      GPS_SERIAL.end();
-    }
+  // reconnect at proper baud
+  gps = new Adafruit_GPS(&GPS_SERIAL);
+  GPS_SERIAL.begin(115200);
+  // wait for the GPS to boot
+  delay(2250);
+  // Send GPS Configurations
+  if (GPS_SERIAL) {
+    GPS_SendConfig(NMEAVersion23, 28);
+    GPS_SendConfig(FullPower, 16);
 
-    // reconnect at proper baud
-    gps = new Adafruit_GPS(&GPS_SERIAL);
-    GPS_SERIAL.begin(115200);
-    // wait for the GPS to boot
-    delay(2250);
-    // Send GPS Configurations
-    if (GPS_SERIAL) {
-      GPS_SendConfig(NMEAVersion23, 28);
-      GPS_SendConfig(FullPower, 16);
-
-      GPS_SendConfig(GPGLLOff, 16);
-      GPS_SendConfig(GPVTGOff, 16);
-      GPS_SendConfig(GPGSVOff, 16);
-      GPS_SendConfig(GPGSAOff, 16);
-      // GPS_SendConfig(GPGGAOn5, 16); // for 10hz
-      GPS_SendConfig(GPGGAOn10, 16); // for 18hz
-      GPS_SendConfig(NavTypeAutomobile, 44);
-      GPS_SendConfig(ENABLE_GPS_ONLY, 68);
-      // GPS_SendConfig(Navrate10hz, 14);
-      GPS_SendConfig(Navrate18hz, 14);
-    } else {
-      debugln("No GPS????");
-    }
+    GPS_SendConfig(GPGLLOff, 16);
+    GPS_SendConfig(GPVTGOff, 16);
+    GPS_SendConfig(GPGSVOff, 16);
+    GPS_SendConfig(GPGSAOff, 16);
+    // GPS_SendConfig(GPGGAOn5, 16); // for 10hz
+    GPS_SendConfig(GPGGAOn10, 16); // for 18hz
+    GPS_SendConfig(NavTypeAutomobile, 44);
+    GPS_SendConfig(ENABLE_GPS_ONLY, 68);
+    // GPS_SendConfig(Navrate10hz, 14);
+    GPS_SendConfig(Navrate18hz, 14);
+  } else {
+    debugln("No GPS????");
   }
-#endif
+}
 
-// setup / loop / pages
-#ifndef DISPLAY_FUNCTIONS
-  void displaySetup() {
-    debugln("SETTING UP DISPLAY");
-    delay(250); // wait for the OLED to power up
-    #ifdef USE_1306_DISPLAY
-      display.begin(SSD1306_SWITCHCAPVCC, I2C_DISPLAY_ADDRESS);
-    #else
-      display.begin(I2C_DISPLAY_ADDRESS, true);
-    #endif
-    display.setTextColor(DISPLAY_TEXT_WHITE);
-    display.setTextWrap(false);
-    display.setFont();
-    display.clearDisplay();
-    display.display();
+// Display functions
+void displaySetup() {
+  debugln("SETTING UP DISPLAY");
+  delay(250); // wait for the OLED to power up
+  #ifdef USE_1306_DISPLAY
+    display.begin(SSD1306_SWITCHCAPVCC, I2C_DISPLAY_ADDRESS);
+  #else
+    display.begin(I2C_DISPLAY_ADDRESS, true);
+  #endif
+  display.setTextColor(DISPLAY_TEXT_WHITE);
+  display.setTextWrap(false);
+  display.setFont();
+  display.clearDisplay();
+  display.display();
+  displayLastUpdate = millis();
+}
+
+void displayLoop() {
+  // Update Display
+  if (currentMillis - displayLastUpdate > (1000 / displayUpdateRateHz)) {
     displayLastUpdate = millis();
-  }
 
-  void displayLoop() {
-    // Update Display
-    if (currentMillis - displayLastUpdate > (1000 / displayUpdateRateHz)) {
-      displayLastUpdate = millis();
-
-      if (!lapTimer.getCrossing()) {
-        displayStats();
-      } else {
-        displayCrossing();
-      }
-    }
-  }
-
-  bool calculatingFlip = false;
-  void displayCrossing() {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setCursor(0, 0);
-
-    // Draw bitmap on the screen
-    calculatingFlip = calculatingFlip == true ? false : true;
-    if (calculatingFlip) {
-      display.drawBitmap(0, 0, image_data_calculating1, 128, 64, 1);
+    if (!lapTimer.getCrossing()) {
+      displayStats();
     } else {
-      display.drawBitmap(0, 0, image_data_calculating2, 128, 64, 1);
+      displayCrossing();
     }
+  }
+}
 
-    display.display();
+bool calculatingFlip = false;
+void displayCrossing() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+
+  // Draw bitmap on the screen
+  calculatingFlip = calculatingFlip == true ? false : true;
+  if (calculatingFlip) {
+    display.drawBitmap(0, 0, image_data_calculating1, 128, 64, 1);
+  } else {
+    display.drawBitmap(0, 0, image_data_calculating2, 128, 64, 1);
   }
 
-  void displayLoadPage() {
-    display.clearDisplay();
-    display.drawBitmap(0, 0, image_data_bird2, 128, 64, 1);
-    display.setCursor(0, 0);
-    display.setTextSize(1);
-    display.println("");
-    display.setTextSize(2);
-    display.setTextColor(DISPLAY_TEXT_BLACK);
-    display.println("Loading");
-    display.setTextColor(DISPLAY_TEXT_WHITE);
-    display.display();
-  }
+  display.display();
+}
 
-  bool activityFlasher = false;
-  unsigned long lastCurTime = -1;
-  unsigned long worstTimeDifference = 0;
-  void displayStats() {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setCursor(0, 0);
+void displayLoadPage() {
+  display.clearDisplay();
+  display.drawBitmap(0, 0, image_data_bird2, 128, 64, 1);
+  display.setCursor(0, 0);
+  display.setTextSize(1);
+  display.println("");
+  display.setTextSize(2);
+  display.setTextColor(DISPLAY_TEXT_BLACK);
+  display.println("Loading");
+  display.setTextColor(DISPLAY_TEXT_WHITE);
+  display.display();
+}
 
-    display.print("Q:");
-    display.print(gps->fixquality);
+bool activityFlasher = false;
+unsigned long lastCurTime = -1;
+unsigned long worstTimeDifference = 0;
+void displayStats() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
 
-    display.print(" H:");
-    display.print(gps->HDOP, 2);
+  display.print("Q:");
+  display.print(gps->fixquality);
 
-    // this little derp here just lets me know the device is still working when the GPS hangs for a moment
-    display.print(" [");
-    activityFlasher = activityFlasher == true ? false : true;
-    display.print(activityFlasher == true ? "*" : " ");
-    display.print("|");
-    display.print(ledState == LOW ? "*" : " ");
-    display.print("] ");
+  display.print(" H:");
+  display.print(gps->HDOP, 2);
 
-    // debugging device "framerate"
-    display.print(frameRate, 1);
-    display.print("Hz");
+  // this little derp here just lets me know the device is still working when the GPS hangs for a moment
+  display.print(" [");
+  activityFlasher = activityFlasher == true ? false : true;
+  display.print(activityFlasher == true ? "*" : " ");
+  display.print("|");
+  display.print(ledState == LOW ? "*" : " ");
+  display.print("] ");
+
+  // debugging device "framerate"
+  display.print(frameRate, 1);
+  display.print("Hz");
 
 
-    display.println();
+  display.println();
 
-    display.print("St:");
-    display.print(gps->satellites);
-    display.print(" rs:");
-    display.print(lapTimer.getRaceStarted() == true ? "T" : "F");
-    display.print(" cr:");
-    display.print(lapTimer.getCrossing() == true ? "T" : "F");
-    display.print(" la:");
-    display.print(lapTimer.getLaps());
-    display.println();
+  display.print("St:");
+  display.print(gps->satellites);
+  display.print(" rs:");
+  display.print(lapTimer.getRaceStarted() == true ? "T" : "F");
+  display.print(" cr:");
+  display.print(lapTimer.getCrossing() == true ? "T" : "F");
+  display.print(" la:");
+  display.print(lapTimer.getLaps());
+  display.println();
 
-    display.print("CLT: ");
-    display.print(lapTimer.getCurrentLapTime() / 1000);
-    display.print(".");
-    display.print(lapTimer.getCurrentLapTime() % 1000);
-    // display.print(", ");
-    // display.print(lapTimer.lapTimer.getCurrentLapTime());
-    
-    // our wacky way of making sure the driver isnt off to the side and can "actually cross" the line
-    bool idnl = lapTimer.insideLineThreshold(
-      gps->latitudeDegrees, gps->longitudeDegrees,
-      crossingPointALat,
-      crossingPointALng,
-      crossingPointBLat,
-      crossingPointBLng
-    );
-    display.print(" LT:");
-    display.print(idnl == true ? "T" : "F");
-    display.print(":");
-    // our actual distance to the line reguardless
-    double dtl = lapTimer.pointLineSegmentDistance(
-      gps->latitudeDegrees, gps->longitudeDegrees,
-      crossingPointALat,
-      crossingPointALng,
-      crossingPointBLat,
-      crossingPointBLng
-    );
-    display.print(dtl);
-    display.println();
+  display.print("CLT: ");
+  display.print(lapTimer.getCurrentLapTime() / 1000);
+  display.print(".");
+  display.print(lapTimer.getCurrentLapTime() % 1000);
+  // display.print(", ");
+  // display.print(lapTimer.lapTimer.getCurrentLapTime());
 
-    display.print("B:");
-    display.print(lapTimer.getBestLapNumber());
-    display.print("-");
-    display.print(lapTimer.getBestLapTime() / 1000);
-    display.print(".");
-    display.print(lapTimer.getBestLapTime() % 1000);
-    display.print(" L: ");
-    display.print(lapTimer.getLastLapTime() / 1000);
-    display.print(".");
-    display.print(lapTimer.getLastLapTime() % 1000);
+  // our wacky way of making sure the driver isnt off to the side and can "actually cross" the line
+  bool idnl = lapTimer.insideLineThreshold(
+    gps->latitudeDegrees, gps->longitudeDegrees,
+    crossingPointALat,
+    crossingPointALng,
+    crossingPointBLat,
+    crossingPointBLng
+  );
+  display.print(" LT:");
+  display.print(idnl == true ? "T" : "F");
+  display.print(":");
+  // our actual distance to the line reguardless
+  double dtl = lapTimer.pointLineSegmentDistance(
+    gps->latitudeDegrees, gps->longitudeDegrees,
+    crossingPointALat,
+    crossingPointALng,
+    crossingPointBLat,
+    crossingPointBLng
+  );
+  display.print(dtl);
+  display.println();
 
-    // display.print("lapStart: ");
-    // display.println(lapTimer.getCurrentLapStartTime());
-    // display.print("CurTime: ");
-    // display.println(getGpsTimeInMilliseconds());
+  display.print("B:");
+  display.print(lapTimer.getBestLapNumber());
+  display.print("-");
+  display.print(lapTimer.getBestLapTime() / 1000);
+  display.print(".");
+  display.print(lapTimer.getBestLapTime() % 1000);
+  display.print(" L: ");
+  display.print(lapTimer.getLastLapTime() / 1000);
+  display.print(".");
+  display.print(lapTimer.getLastLapTime() % 1000);
 
-    display.println();
-    display.print("pace: ");
-    display.print(lapTimer.getPaceDifference(), 3);
-    display.print(" crD:");
-    display.print(lapTimer.getCurrentLapDistance());
+  // display.print("lapStart: ");
+  // display.println(lapTimer.getCurrentLapStartTime());
+  // display.print("CurTime: ");
+  // display.println(getGpsTimeInMilliseconds());
 
-    display.println();
-    display.print("AtM:");
-    display.print(gps->altitude);
-    display.print(" odo:");
-    display.print(lapTimer.getTotalDistanceTraveled());
+  display.println();
+  display.print("pace: ");
+  display.print(lapTimer.getPaceDifference(), 3);
+  display.print(" crD:");
+  display.print(lapTimer.getCurrentLapDistance());
 
-    display.println();   
-    // display.print("BLD:");
-    // display.print(lapTimer.getBestLapDistance());
-    // display.print(" LLD:");
-    // display.print(lapTimer.getLastLapDistance());
-    display.print("BLP:");
-    display.print(lapTimer.getBestLapTime() / lapTimer.getBestLapDistance());
-    // display.print(" CLP:");
-    // display.print(lapTimer.getCurrentLapTime() / lapTimer.getCurrentLapDistance());
-    display.print(" MPH:");
-    double speedMphFromKnots = gps->speed * 1.15078;
-    display.print(speedMphFromKnots, 2);
+  display.println();
+  display.print("AtM:");
+  display.print(gps->altitude);
+  display.print(" odo:");
+  display.print(lapTimer.getTotalDistanceTraveled());
 
-    display.println();
-    display.print("Time:");
-    display.println(getGpsTimeInMilliseconds());
+  display.println();
+  // display.print("BLD:");
+  // display.print(lapTimer.getBestLapDistance());
+  // display.print(" LLD:");
+  // display.print(lapTimer.getLastLapDistance());
+  display.print("BLP:");
+  display.print(lapTimer.getBestLapDistance() > 0 ? lapTimer.getBestLapTime() / lapTimer.getBestLapDistance() : 0);
+  // display.print(" CLP:");
+  // display.print(lapTimer.getCurrentLapTime() / lapTimer.getCurrentLapDistance());
+  display.print(" MPH:");
+  double speedMphFromKnots = gps->speed * 1.15078;
+  display.print(speedMphFromKnots, 2);
 
-    display.display();
-  }
-#endif
+  display.println();
+  display.print("Time:");
+  display.println(getGpsTimeInMilliseconds());
+
+  display.display();
+}

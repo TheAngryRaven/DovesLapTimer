@@ -1,8 +1,8 @@
 /**
- * Originally intended to use for gokarting this library offers a simple way to get basic lap timing information from a GPS based system.
+ * GPS-based lap timing library for go-kart and racing applications.
  * This library does NOT interface with your GPS, simply feed it data and check the state.
- * Right now this only offers a single split time around the "start/finish" and would not work for many other purposes without modification.
- * 
+ * Supports start/finish line detection, 3-sector split timing, pace comparison, and distance tracking.
+ *
  * The development of this library has been overseen, and all documentation has been generated using chatGPT4.
  */
 
@@ -138,7 +138,7 @@ public:
    * @param currentAlt Altitude of the second GPS point in meters.
    * @return The 3D distance between the two GPS points in meters.
    */
-  double haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double curentLng, double currentAlt);
+  double haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double currentLng, double currentAlt);
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -452,7 +452,7 @@ private:
 
   Stream *_serial;
   
-  unsigned long millisecondsSinceMidnight = -1;
+  unsigned long millisecondsSinceMidnight = 0;
   // Timing variables
   double crossingThresholdMeters;
   bool raceStarted = false;
@@ -495,6 +495,14 @@ private:
   double positionPrevLat = 0.00;
   double positionPrevLng = 0.00;
   bool firstPositionReceived = false;  // Explicit flag for first GPS fix detection
+
+  // Previous GPS fix snapshot (used as Catmull-Rom pre-crossing control point)
+  double prevFixLat = 0;
+  double prevFixLng = 0;
+  unsigned long prevFixTime = 0;
+  float prevFixOdometer = 0;
+  float prevFixSpeedKmh = 0;
+  bool hasPrevFix = false;
 
   double startFinishPointALat;
   double startFinishPointALng;
