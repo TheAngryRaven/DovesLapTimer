@@ -170,7 +170,7 @@ void WaypointLapTimer::_processProximityBuffer() {
     _currentLapStartTime = crossingTime;
     _currentLapOdometerStart = crossingOdometer;
 
-    if (_bestLapTime <= 0 || lapTime < _bestLapTime) {
+    if (_bestLapTime == 0 || lapTime < _bestLapTime) {
       _bestLapTime = lapTime;
       _bestLapDistance = lapDistance;
       _bestLapNumber = _laps;
@@ -244,6 +244,14 @@ float WaypointLapTimer::getPaceDifference() const {
   float currentPace = currentLapTime / currentLapDist;
   float bestPace = _bestLapTime / _bestLapDistance;
   return currentPace - bestPace;
+}
+
+float WaypointLapTimer::getLastLapDistance() const {
+  return _lastLapDistance;
+}
+
+float WaypointLapTimer::getBestLapDistance() const {
+  return _bestLapDistance;
 }
 
 bool WaypointLapTimer::hasWaypoint() const {

@@ -7,6 +7,7 @@
  */
 
 #include "DovesLapTimer.h"
+#include "GeoMath.h"
 
 #define debugln debug_println
 #define debug debug_print
@@ -397,29 +398,11 @@ double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, dou
 }
 
 double DovesLapTimer::haversine(double lat1, double lon1, double lat2, double lon2) {
-  // Convert latitude and longitude from degrees to radians
-  double lat1Rad = radians(lat1);
-  double lon1Rad = radians(lon1);
-  double lat2Rad = radians(lat2);
-  double lon2Rad = radians(lon2);
-
-  // Calculate the differences in latitude and longitude
-  double deltaLat = lat2Rad - lat1Rad;
-  double deltaLon = lon2Rad - lon1Rad;
-
-  // Calculate the Haversine formula components
-  double a = pow(sin(deltaLat / 2), 2) + cos(lat1Rad) * cos(lat2Rad) * pow(sin(deltaLon / 2), 2);
-  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-  // Calculate the great-circle distance
-  double distance = radiusEarth * c;
-  return distance;
+  return geoHaversine(lat1, lon1, lat2, lon2);
 }
 
 double DovesLapTimer::haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double currentLng, double currentAlt) {
-  double dist = haversine(prevLat, prevLng, currentLat, currentLng);
-  double altDiff = currentAlt - prevAlt;
-  return sqrt(dist * dist + altDiff * altDiff);
+  return geoHaversine3D(prevLat, prevLng, prevAlt, currentLat, currentLng, currentAlt);
 }
 
 /////////// private functions

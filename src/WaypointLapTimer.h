@@ -54,6 +54,9 @@ public:
   int getBestLapNumber() const;
   float getPaceDifference() const;
 
+  float getLastLapDistance() const;
+  float getBestLapDistance() const;
+
   // Waypoint access
   bool hasWaypoint() const;
   double getWaypointLat() const;

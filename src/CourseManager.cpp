@@ -28,8 +28,7 @@ void CourseManager::_initCourses(TrackConfig& config) {
   for (int i = 0; i < _courseCount; i++) {
     CourseConfig& course = config.courses[i];
 
-    // Use placement new to construct timer in-place (avoids assignment operator issues)
-    new (&_courseTimers[i].timer) DovesLapTimer(_crossingThreshold, _serial);
+    _courseTimers[i].timer = DovesLapTimer(_crossingThreshold, _serial);
     _courseTimers[i].timer.forceLinearInterpolation();
     _courseTimers[i].name = course.name;
     _courseTimers[i].lengthFt = course.lengthFt;

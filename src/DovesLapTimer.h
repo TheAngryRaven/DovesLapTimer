@@ -61,8 +61,8 @@ struct DirectionDetector {
   DirectionDetector() : direction(DIR_UNKNOWN), raceSeen(false) {}
   void reset() { direction = DIR_UNKNOWN; raceSeen = false; }
   void onLineCrossing(int sectorNumber);
-  bool isReverse() { return direction == DIR_REVERSE; }
-  bool isResolved() { return direction != DIR_UNKNOWN; }
+  bool isReverse() const { return direction == DIR_REVERSE; }
+  bool isResolved() const { return direction != DIR_UNKNOWN; }
 };
 
 class DovesLapTimer {
