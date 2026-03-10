@@ -569,6 +569,29 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   }
 }
 
+/////////// direction detection
+
+void DirectionDetector::onLineCrossing(int sectorNumber) {
+  if (sectorNumber == 0) {
+    raceSeen = true;
+    return;
+  }
+
+  if (direction != DIR_UNKNOWN) {
+    return;
+  }
+
+  if (!raceSeen) {
+    return;
+  }
+
+  if (sectorNumber == 2) {
+    direction = DIR_FORWARD;
+  } else if (sectorNumber == 3) {
+    direction = DIR_REVERSE;
+  }
+}
+
 /////////// sector timing helper methods
 
 void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNumber) {
@@ -577,7 +600,20 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
     return;
   }
 
-  if (sectorNumber == 0) {
+  // Feed direction detector with raw (physical) sector number
+  _directionDetector.onLineCrossing(sectorNumber);
+
+  // Remap sector number for reverse direction (swap 2<->3)
+  int effectiveSector = sectorNumber;
+  if (_directionDetector.isReverse() && sectorNumber >= 2) {
+    effectiveSector = (sectorNumber == 2) ? 3 : 2;
+    debug(F("Direction reverse: physical S"));
+    debug(sectorNumber);
+    debug(F(" -> logical S"));
+    debugln(effectiveSector);
+  }
+
+  if (effectiveSector == 0) {
     // Crossing start/finish line
     if (raceStarted && currentSector == 3) {
       // Completing sector 3 and finishing lap
@@ -600,8 +636,8 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
     debug(F("Starting Sector 1"));
     debugln();
 
-  } else if (sectorNumber == 2) {
-    // Crossing sector 2 line
+  } else if (effectiveSector == 2) {
+    // Crossing sector 2 line (logical)
     if (currentSector == 1) {
       // Completing sector 1, starting sector 2
       currentLapSector1Time = crossingTime - currentSectorStartTime;
@@ -620,8 +656,8 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
       currentSector = 0;  // Invalidate
     }
 
-  } else if (sectorNumber == 3) {
-    // Crossing sector 3 line
+  } else if (effectiveSector == 3) {
+    // Crossing sector 3 line (logical)
     if (currentSector == 2) {
       // Completing sector 2, starting sector 3
       currentLapSector2Time = crossingTime - currentSectorStartTime;
@@ -791,6 +827,9 @@ void DovesLapTimer::reset() {
   bestSector2LapNumber = 0;
   bestSector3LapNumber = 0;
 
+  // reset direction detection
+  _directionDetector.reset();
+
   // reset time tracking
   millisecondsSinceMidnight = 0;
 
@@ -942,4 +981,13 @@ int DovesLapTimer::getCurrentSector() const {
 }
 bool DovesLapTimer::areSectorLinesConfigured() const {
   return sector2LineConfigured && sector3LineConfigured;
+}
+
+/////////// direction detection getters
+
+int DovesLapTimer::getDirection() const {
+  return _directionDetector.direction;
+}
+bool DovesLapTimer::isDirectionResolved() const {
+  return _directionDetector.direction != DIR_UNKNOWN;
 }
