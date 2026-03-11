@@ -10,6 +10,8 @@
 
 WaypointLapTimer::WaypointLapTimer(Stream *debugSerial) {
   _serial = debugSerial;
+  _speedThresholdMph = COURSE_DETECT_SPEED_THRESHOLD_MPH;
+  _proximityMeters = WAYPOINT_LAP_PROXIMITY_METERS;
   _resetState();
 }
 
@@ -26,6 +28,10 @@ void WaypointLapTimer::_resetState() {
   _positionPrevLng = 0;
   _firstPositionReceived = false;
   _currentSpeedKmh = 0;
+  // _speedThresholdMph and _proximityMeters are NOT reset here —
+  // they are set once in the constructor and preserved through reset()
+  // to match CourseDetector behavior. User-configured values via
+  // setSpeedThresholdMph() / setProximityMeters() survive reset.
 
   _raceStarted = false;
   _crossing = false;
@@ -82,10 +88,18 @@ void WaypointLapTimer::reset() {
   _resetState();
 }
 
+void WaypointLapTimer::setSpeedThresholdMph(float mph) {
+  if (mph > 0) _speedThresholdMph = mph;
+}
+
+void WaypointLapTimer::setProximityMeters(float meters) {
+  if (meters > 0) _proximityMeters = meters;
+}
+
 void WaypointLapTimer::_checkSpeed(double lat, double lng) {
   float speedMph = _currentSpeedKmh * 0.621371;
 
-  if (speedMph >= COURSE_DETECT_SPEED_THRESHOLD_MPH) {
+  if (speedMph >= _speedThresholdMph) {
     _waypointLat = lat;
     _waypointLng = lng;
     _waypointOdometer = _totalDistanceTraveled;
@@ -103,7 +117,7 @@ void WaypointLapTimer::_checkProximity(double lat, double lng) {
 
   double distToWp = geoHaversine(lat, lng, _waypointLat, _waypointLng);
 
-  if (distToWp < WAYPOINT_LAP_PROXIMITY_METERS) {
+  if (distToWp < _proximityMeters) {
     _state = WLT_STATE_IN_PROXIMITY;
     _crossing = true;
     _clearProximityBuffer();
@@ -116,7 +130,7 @@ void WaypointLapTimer::_bufferProximityPoint(double lat, double lng) {
   double distToWp = geoHaversine(lat, lng, _waypointLat, _waypointLng);
 
   // Check if we've exited proximity
-  if (distToWp >= WAYPOINT_LAP_PROXIMITY_METERS) {
+  if (distToWp >= _proximityMeters) {
     _state = WLT_STATE_DRIVING;
     _crossing = false;
     _processProximityBuffer();

@@ -35,6 +35,8 @@ public:
   void acceptCandidate(int index);
   void rejectAllCandidates();
   void reset();
+  void setSpeedThresholdMph(float mph);
+  void setDetectionProximityMeters(float meters);
 
   // Getters
   int getState() const;
@@ -60,6 +62,8 @@ private:
   int _detectedCourseIndex;
   DetectionCandidate _rankedMatches[MAX_COURSES];
   int _rankedMatchCount;
+  float _speedThresholdMph;
+  float _detectionProximityMeters;
 };
 
 #endif

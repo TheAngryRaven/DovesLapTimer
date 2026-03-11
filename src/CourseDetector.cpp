@@ -7,6 +7,8 @@
 
 CourseDetector::CourseDetector() {
   _courseCount = 0;
+  _speedThresholdMph = COURSE_DETECT_SPEED_THRESHOLD_MPH;
+  _detectionProximityMeters = COURSE_DETECT_WAYPOINT_PROXIMITY_METERS;
   reset();
 }
 
@@ -45,7 +47,7 @@ void CourseDetector::update(double lat, double lng, float speedKmh, float totalO
 void CourseDetector::_checkSpeedThreshold(double lat, double lng, float speedKmh, float totalOdometer) {
   float speedMph = speedKmh * 0.621371;
 
-  if (speedMph >= COURSE_DETECT_SPEED_THRESHOLD_MPH) {
+  if (speedMph >= _speedThresholdMph) {
     _waypointLat = lat;
     _waypointLng = lng;
     _waypointOdometer = totalOdometer;
@@ -62,7 +64,7 @@ void CourseDetector::_checkWaypointProximity(double lat, double lng, float total
 
   double distToWaypoint = geoHaversine(lat, lng, _waypointLat, _waypointLng);
 
-  if (distToWaypoint < COURSE_DETECT_WAYPOINT_PROXIMITY_METERS) {
+  if (distToWaypoint < _detectionProximityMeters) {
     _matchCourseRanked(distanceSinceWaypoint);
   }
 }
@@ -110,6 +112,14 @@ void CourseDetector::acceptCandidate(int index) {
 void CourseDetector::rejectAllCandidates() {
   _rankedMatchCount = 0;
   _state = DETECT_STATE_WAYPOINT_SET;
+}
+
+void CourseDetector::setSpeedThresholdMph(float mph) {
+  if (mph > 0) _speedThresholdMph = mph;
+}
+
+void CourseDetector::setDetectionProximityMeters(float meters) {
+  if (meters > 0) _detectionProximityMeters = meters;
 }
 
 /////////// getters

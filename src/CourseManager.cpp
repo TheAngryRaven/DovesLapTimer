@@ -246,3 +246,16 @@ const char* CourseManager::getShortName() const {
 CourseDetector* CourseManager::getDetector() {
   return &_detector;
 }
+
+void CourseManager::setSpeedThresholdMph(float mph) {
+  _detector.setSpeedThresholdMph(mph);
+  _lapAnythingTimer.setSpeedThresholdMph(mph);
+}
+
+void CourseManager::setWaypointProximityMeters(float meters) {
+  _lapAnythingTimer.setProximityMeters(meters);
+}
+
+void CourseManager::setDetectionProximityMeters(float meters) {
+  _detector.setDetectionProximityMeters(meters);
+}

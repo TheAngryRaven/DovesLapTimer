@@ -69,6 +69,11 @@ public:
   // Detector access
   CourseDetector* getDetector();
 
+  // Threshold setters
+  void setSpeedThresholdMph(float mph);
+  void setWaypointProximityMeters(float meters);
+  void setDetectionProximityMeters(float meters);
+
 private:
   template<typename... Args>
   void debug_print(Args&&... args) {

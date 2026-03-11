@@ -41,6 +41,8 @@ public:
   void updateCurrentTime(unsigned long currentTimeMilliseconds);
   int loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots);
   void reset();
+  void setSpeedThresholdMph(float mph);
+  void setProximityMeters(float meters);
 
   // Timing getters (duck-typed to DovesLapTimer)
   bool getRaceStarted() const;
@@ -113,6 +115,8 @@ private:
   double _positionPrevLng;
   bool _firstPositionReceived;
   float _currentSpeedKmh;
+  float _speedThresholdMph;
+  float _proximityMeters;
 
   // Timing
   bool _raceStarted;
