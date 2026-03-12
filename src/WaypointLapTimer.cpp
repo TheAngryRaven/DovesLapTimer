@@ -103,6 +103,8 @@ void WaypointLapTimer::_checkSpeed(double lat, double lng) {
     _waypointLat = lat;
     _waypointLng = lng;
     _waypointOdometer = _totalDistanceTraveled;
+    _currentLapStartTime = _millisecondsSinceMidnight;
+    _currentLapOdometerStart = _totalDistanceTraveled;
     _state = WLT_STATE_DRIVING;
     debugln(F("Waypoint set (Lap Anything mode)"));
   }
@@ -196,9 +198,23 @@ void WaypointLapTimer::_processProximityBuffer() {
     debugln((double)(lapTime / 1000.0), 3);
   } else {
     _raceStarted = true;
+    _laps++;
+    unsigned long lapTime = crossingTime - _currentLapStartTime;
+    float lapDistance = crossingOdometer - _currentLapOdometerStart;
+
+    _lastLapTime = lapTime;
+    _lastLapDistance = lapDistance;
     _currentLapStartTime = crossingTime;
     _currentLapOdometerStart = crossingOdometer;
-    debugln(F("Race started (Lap Anything mode)"));
+
+    if (_bestLapTime == 0 || lapTime < _bestLapTime) {
+      _bestLapTime = lapTime;
+      _bestLapDistance = lapDistance;
+      _bestLapNumber = _laps;
+    }
+
+    debug(F("Lap 1 (from waypoint): "));
+    debugln((double)(lapTime / 1000.0), 3);
   }
 
   // Update waypoint odometer for next lap
