@@ -7,6 +7,7 @@
  */
 
 #include "DovesLapTimer.h"
+#include "GeoMath.h"
 
 #define debugln debug_println
 #define debug debug_print
@@ -397,29 +398,11 @@ double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, dou
 }
 
 double DovesLapTimer::haversine(double lat1, double lon1, double lat2, double lon2) {
-  // Convert latitude and longitude from degrees to radians
-  double lat1Rad = radians(lat1);
-  double lon1Rad = radians(lon1);
-  double lat2Rad = radians(lat2);
-  double lon2Rad = radians(lon2);
-
-  // Calculate the differences in latitude and longitude
-  double deltaLat = lat2Rad - lat1Rad;
-  double deltaLon = lon2Rad - lon1Rad;
-
-  // Calculate the Haversine formula components
-  double a = pow(sin(deltaLat / 2), 2) + cos(lat1Rad) * cos(lat2Rad) * pow(sin(deltaLon / 2), 2);
-  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-  // Calculate the great-circle distance
-  double distance = radiusEarth * c;
-  return distance;
+  return geoHaversine(lat1, lon1, lat2, lon2);
 }
 
 double DovesLapTimer::haversine3D(double prevLat, double prevLng, double prevAlt, double currentLat, double currentLng, double currentAlt) {
-  double dist = haversine(prevLat, prevLng, currentLat, currentLng);
-  double altDiff = currentAlt - prevAlt;
-  return sqrt(dist * dist + altDiff * altDiff);
+  return geoHaversine3D(prevLat, prevLng, prevAlt, currentLat, currentLng, currentAlt);
 }
 
 /////////// private functions
@@ -569,6 +552,29 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   }
 }
 
+/////////// direction detection
+
+void DirectionDetector::onLineCrossing(int sectorNumber) {
+  if (sectorNumber == 0) {
+    raceSeen = true;
+    return;
+  }
+
+  if (direction != DIR_UNKNOWN) {
+    return;
+  }
+
+  if (!raceSeen) {
+    return;
+  }
+
+  if (sectorNumber == 2) {
+    direction = DIR_FORWARD;
+  } else if (sectorNumber == 3) {
+    direction = DIR_REVERSE;
+  }
+}
+
 /////////// sector timing helper methods
 
 void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNumber) {
@@ -577,7 +583,20 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
     return;
   }
 
-  if (sectorNumber == 0) {
+  // Feed direction detector with raw (physical) sector number
+  _directionDetector.onLineCrossing(sectorNumber);
+
+  // Remap sector number for reverse direction (swap 2<->3)
+  int effectiveSector = sectorNumber;
+  if (_directionDetector.isReverse() && sectorNumber >= 2) {
+    effectiveSector = (sectorNumber == 2) ? 3 : 2;
+    debug(F("Direction reverse: physical S"));
+    debug(sectorNumber);
+    debug(F(" -> logical S"));
+    debugln(effectiveSector);
+  }
+
+  if (effectiveSector == 0) {
     // Crossing start/finish line
     if (raceStarted && currentSector == 3) {
       // Completing sector 3 and finishing lap
@@ -600,8 +619,8 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
     debug(F("Starting Sector 1"));
     debugln();
 
-  } else if (sectorNumber == 2) {
-    // Crossing sector 2 line
+  } else if (effectiveSector == 2) {
+    // Crossing sector 2 line (logical)
     if (currentSector == 1) {
       // Completing sector 1, starting sector 2
       currentLapSector1Time = crossingTime - currentSectorStartTime;
@@ -620,8 +639,8 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
       currentSector = 0;  // Invalidate
     }
 
-  } else if (sectorNumber == 3) {
-    // Crossing sector 3 line
+  } else if (effectiveSector == 3) {
+    // Crossing sector 3 line (logical)
     if (currentSector == 2) {
       // Completing sector 2, starting sector 3
       currentLapSector2Time = crossingTime - currentSectorStartTime;
@@ -791,6 +810,9 @@ void DovesLapTimer::reset() {
   bestSector2LapNumber = 0;
   bestSector3LapNumber = 0;
 
+  // reset direction detection
+  _directionDetector.reset();
+
   // reset time tracking
   millisecondsSinceMidnight = 0;
 
@@ -942,4 +964,13 @@ int DovesLapTimer::getCurrentSector() const {
 }
 bool DovesLapTimer::areSectorLinesConfigured() const {
   return sector2LineConfigured && sector3LineConfigured;
+}
+
+/////////// direction detection getters
+
+int DovesLapTimer::getDirection() const {
+  return _directionDetector.direction;
+}
+bool DovesLapTimer::isDirectionResolved() const {
+  return _directionDetector.direction != DIR_UNKNOWN;
 }

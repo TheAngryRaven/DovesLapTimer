@@ -17,6 +17,34 @@ using TRITYPE = double;
 #define CROSSING_LINE_SIDE_EXACT 0
 #define CROSSING_LINE_SIDE_B 1
 
+// Course detection constants
+#define COURSE_DETECT_SPEED_THRESHOLD_MPH  20
+#define COURSE_DETECT_WAYPOINT_PROXIMITY_METERS 10.0
+#define COURSE_DETECT_MIN_DISTANCE_METERS  200.0
+#define COURSE_DETECT_DISTANCE_TOLERANCE_PCT  0.25
+#define COURSE_DETECT_MAX_REJECTIONS  3
+#define METERS_TO_FEET  3.28084
+
+// Waypoint lap timer constants
+#define WAYPOINT_LAP_MIN_DISTANCE_METERS  100.0
+#define WAYPOINT_LAP_PROXIMITY_METERS  30.0
+#define WAYPOINT_LAP_BUFFER_SIZE  50
+
+// Direction detection
+#define DIR_UNKNOWN  0
+#define DIR_FORWARD  1
+#define DIR_REVERSE  2
+
+// Course detection states
+#define DETECT_STATE_IDLE  0
+#define DETECT_STATE_WAITING_FOR_SPEED  1
+#define DETECT_STATE_WAYPOINT_SET  2
+#define DETECT_STATE_CANDIDATES_READY  3
+#define DETECT_STATE_DETECTED  4
+
+// Maximum courses supported
+#define MAX_COURSES  8
+
 
 struct crossingPointBufferEntry {
   double lat; // latitude
@@ -24,6 +52,17 @@ struct crossingPointBufferEntry {
   unsigned long time; // current time in milliseconds
   float odometer; // time traveled since device start and this entry
   float speedKmh; // speed in kmph
+};
+
+struct DirectionDetector {
+  int direction;    // DIR_UNKNOWN, DIR_FORWARD, DIR_REVERSE
+  bool raceSeen;
+
+  DirectionDetector() : direction(DIR_UNKNOWN), raceSeen(false) {}
+  void reset() { direction = DIR_UNKNOWN; raceSeen = false; }
+  void onLineCrossing(int sectorNumber);
+  bool isReverse() const { return direction == DIR_REVERSE; }
+  bool isResolved() const { return direction != DIR_UNKNOWN; }
 };
 
 class DovesLapTimer {
@@ -358,6 +397,22 @@ public:
    */
   bool areSectorLinesConfigured() const;
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Direction detection methods
+
+  /**
+   * @brief Gets the detected driving direction.
+   *
+   * @return DIR_UNKNOWN (0), DIR_FORWARD (1), or DIR_REVERSE (2).
+   */
+  int getDirection() const;
+  /**
+   * @brief Checks if the driving direction has been resolved.
+   *
+   * @return True if direction is known (forward or reverse), false if still unknown.
+   */
+  bool isDirectionResolved() const;
+
 private:
   template<typename... Args>
   void debug_print(Args&&... args) {
@@ -451,7 +506,8 @@ private:
   void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
 
   Stream *_serial;
-  
+  DirectionDetector _directionDetector;
+
   unsigned long millisecondsSinceMidnight = 0;
   // Timing variables
   double crossingThresholdMeters;
@@ -526,7 +582,7 @@ private:
   bool sector3LineConfigured = false;
 
   // Earth's radius in meters
-  const double radiusEarth = 6371.0 * 1000;
+  static constexpr double radiusEarth = 6371.0 * 1000;
 
   // HOTFIX for low memory systems, could be expanded with more testing
   #if ((RAMEND - RAMSTART) > 3000 )
