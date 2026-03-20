@@ -8,6 +8,14 @@ Library for Arduino for creating damned accurate lap-timings using GPS data, on 
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, using the 4 points closest to the line, creates a catmullrom spline to interpolate the exact crossing time.
 
+## What's New in v4.0
+
+* **Automatic Course Detection** - Drive a lap at any track and the library figures out which course layout you're on by matching driven distance against known courses. No manual selection needed.
+* **Multi-Course Support** - Define up to 8 course layouts per track (different configurations, rental vs. pro layouts, etc). `CourseManager` orchestrates them all.
+* **Direction Detection** - Automatically detects if you're driving the course forward or reverse based on which sector line you cross first.
+* **"Lap Anything" Fallback** - If course detection fails after 3 attempts, falls back to `WaypointLapTimer` which drops a waypoint and uses proximity-based timing. Works on any track, anywhere - no pre-configured lines needed.
+* **Configurable Thresholds** - Speed, proximity, and detection thresholds are now adjustable at runtime via setter methods.
+
 ## Supported Hardware: MCU
 While this is technially an arduino library, this needs a device with a large amount of ram and processing power due to all the floating point math.
 * Arduino Mega+
@@ -23,7 +31,7 @@ While this is technially an arduino library, this needs a device with a large am
 
 ## Supported Hardware: GPS
   Getting GPS data is your job, not mine, but here are a couple I reccomend that work well with the Adafruit GPS library.
-  
+
   >**Note:** The [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino) has an example on how to send ublox configuration commands while receiving only NMEA sentences.
   >
   >**Note:** If GPS is not an authentic UBLOX module, sending configuration commands might, fail but receiving data should probably still work.
@@ -66,15 +74,43 @@ While this is technially an arduino library, this needs a device with a large am
   * Current lap sector times
   * Optimal lap time (sum of best sectors)
   * Track which lap achieved best sector times
+* **Direction detection** (v4.0)
+  * Automatic forward/reverse detection based on sector crossing order
+* **Automatic course detection** (v4.0)
+  * Detects which course layout the driver is on by matching driven distance
+  * Supports up to 8 course layouts per track
+* **"Lap Anything" fallback** (v4.0)
+  * Proximity-based lap timing when no course is detected
+  * Works on any track without pre-configured crossing lines
 * List lap times
 
+## Architecture (v4.0)
+
+The library is organized into a hierarchy of components:
+
+```
+CourseManager (orchestrator - optional, use for multi-course tracks)
+├── DovesLapTimer[8]        # One per course layout, line-crossing detection
+│   └── DirectionDetector   # Detects forward/reverse driving direction
+├── CourseDetector           # State machine: speed → waypoint → distance match
+├── WaypointLapTimer         # Fallback "Lap Anything" proximity-based timer
+└── GeoMath.h                # Shared haversine distance functions
+```
+
+You can still use `DovesLapTimer` standalone if you only have one course and know your crossing lines up front. `CourseManager` is for when you want automatic course detection and multi-course support.
+
 ## API
+
+### Option 1: DovesLapTimer (standalone, single course)
+
+Use this if you know your track and just want lap timing. This is the original API.
+
 See the source code, specifically the [DovesLapTimer.h](src/DovesLapTimer.h) file.
 The code should have clarifying comments wherever there are any unclear bits.
 
 #### Initialize
 ```c
-  // Initialize with internal debugger, and or crossingThreshold (default 10)
+  // Initialize with internal debugger, and or crossingThreshold (default 7)
   #define DEBUG_SERIAL Serial
   // Only change if you know what you're doing
   double crossingThresholdMeters = 7.0;
@@ -170,7 +206,170 @@ Now if you want any running information,  you have the following...
   int getBestSector1LapNumber() const; // Lap number that achieved best sector 1.
   int getBestSector2LapNumber() const; // Lap number that achieved best sector 2.
   int getBestSector3LapNumber() const; // Lap number that achieved best sector 3.
+
+  // Direction detection (v4.0)
+  int getDirection() const; // DIR_UNKNOWN (0), DIR_FORWARD (1), or DIR_REVERSE (2).
+  bool isDirectionResolved() const; // True once direction has been determined.
 ```
+
+### Option 2: CourseManager (multi-course, automatic detection)
+
+Use this when your track has multiple course layouts and you want the library to figure out which one you're on automatically. The `CourseManager` feeds GPS data to all course timers simultaneously, uses `CourseDetector` to identify the course by driven distance, and falls back to `WaypointLapTimer` ("Lap Anything") if detection fails.
+
+#### Define Your Track
+
+```c
+#include <CourseManager.h>
+
+TrackConfig myTrack = {
+  "Orlando Kart Center",  // longName
+  "OKC",                  // shortName
+  {
+    // Course 1
+    {
+      "Pro Layout",          // name
+      2100.0,                // lengthFt (used for course detection distance matching)
+      // Start/Finish line (point A lat, lng, point B lat, lng)
+      28.4192, -81.4301, 28.4193, -81.4300,
+      // Sector 2 line
+      28.4195, -81.4305, 28.4196, -81.4304,
+      // Sector 3 line
+      28.4190, -81.4298, 28.4191, -81.4297,
+      true,  // hasSector2
+      true   // hasSector3
+    },
+    // Course 2
+    {
+      "Rental Layout",
+      1800.0,
+      28.4192, -81.4301, 28.4193, -81.4300,
+      0, 0, 0, 0,  // no sector 2
+      0, 0, 0, 0,  // no sector 3
+      false,
+      false
+    }
+  },
+  2  // courseCount
+};
+```
+
+#### Initialize and Use
+
+```c
+CourseManager manager(myTrack, 7.0, &Serial);  // track config, crossing threshold, debug serial
+
+void loop() {
+  if (gps->fix) {
+    manager.updateCurrentTime(getGpsTimeInMilliseconds());
+    manager.loop(gps->latitudeDegrees, gps->longitudeDegrees, gps->altitude, gps->speed);
+
+    if (manager.isDetectionComplete()) {
+      if (manager.isLapAnythingActive()) {
+        // No course matched, using Lap Anything fallback
+        WaypointLapTimer* timer = manager.getLapAnythingTimer();
+        // Use timer->getLaps(), timer->getLastLapTime(), etc.
+      } else {
+        // Course detected!
+        DovesLapTimer* timer = manager.getActiveTimer();
+        Serial.println(manager.getActiveCourseName());
+        // Use timer->getLaps(), timer->getLastLapTime(), etc.
+        // Full DovesLapTimer API available (sectors, direction, pace, etc.)
+      }
+    }
+  }
+}
+```
+
+#### CourseManager API
+
+```c
+  // Core loop (same interface as DovesLapTimer)
+  void updateCurrentTime(unsigned long ms);
+  int loop(double lat, double lng, float altMeters, float speedKnots);
+  void reset();
+
+  // Detection state
+  bool isDetectionComplete() const;     // True if course detected or Lap Anything active.
+  int getActiveCourseIndex() const;     // Index of detected course (-1 if none).
+  const char* getActiveCourseName() const; // Name of detected course, or "Lap Anything".
+  int getCourseCount() const;           // Number of configured courses.
+  int getDetectionRejectionCount() const; // How many times detection has been rejected.
+
+  // Timer access
+  DovesLapTimer* getActiveTimer();      // Pointer to detected course's timer (NULL if none).
+  WaypointLapTimer* getLapAnythingTimer(); // Pointer to fallback timer.
+  bool isLapAnythingActive() const;     // True if using Lap Anything fallback.
+
+  // Track metadata
+  const char* getTrackName() const;     // Track long name.
+  const char* getShortName() const;     // Track short name.
+
+  // Memory management
+  void pruneInactiveCourses();          // Deactivate non-detected timers to save RAM.
+
+  // Threshold setters (adjustable at runtime)
+  void setSpeedThresholdMph(float mph);           // Speed to trigger detection (default 20 mph).
+  void setWaypointProximityMeters(float meters);   // Proximity for Lap Anything (default 30m).
+  void setDetectionProximityMeters(float meters);  // Proximity for course detection (default 10m).
+```
+
+### WaypointLapTimer ("Lap Anything")
+
+The `WaypointLapTimer` is the fallback that kicks in when no pre-configured course matches. It can also be used standalone if you just want proximity-based timing without any crossing lines.
+
+**How it works:**
+1. Wait for speed >= 20 mph, drop a waypoint at that position
+2. Drive away (minimum 100m traveled)
+3. When you return near the waypoint (within 30m), it buffers approach points
+4. On exit from the proximity zone, it uses the closest-approach point's time as the lap split
+5. Repeat for subsequent laps
+
+```c
+  // Same timing getters as DovesLapTimer (duck-typed)
+  bool getRaceStarted() const;
+  int getLaps() const;
+  unsigned long getCurrentLapTime() const;
+  unsigned long getLastLapTime() const;
+  unsigned long getBestLapTime() const;
+  float getPaceDifference() const;
+  float getCurrentLapDistance() const;
+  float getTotalDistanceTraveled() const;
+  // ... etc.
+
+  // Waypoint info
+  bool hasWaypoint() const;
+  double getWaypointLat() const;
+  double getWaypointLng() const;
+
+  // Sector getters exist but return 0 (sectors not supported in proximity mode)
+```
+
+### How Course Detection Works
+
+The `CourseDetector` is a state machine that runs inside `CourseManager`:
+
+1. **IDLE** - Waiting to start
+2. **WAITING_FOR_SPEED** - Waiting for driver to reach 20 mph
+3. **WAYPOINT_SET** - Speed threshold hit, waypoint dropped. Now waiting for the driver to travel 200m+ and return within 10m of the waypoint
+4. **CANDIDATES_READY** - Driver returned. Driven distance is compared to each course's `lengthFt` (within 25% tolerance). Ranked candidates are built
+5. **DETECTED** - `CourseManager` validated a candidate (the course's timer saw `raceStarted = true`)
+
+If no candidates match or validation fails 3 times, `CourseManager` activates "Lap Anything" mode.
+
+### Direction Detection
+
+When sector lines are configured, the library automatically detects whether you're driving the course forward or in reverse:
+
+* After the start/finish line is first crossed, the first sector line you cross determines direction
+* Sector 2 first = **forward** (`DIR_FORWARD`)
+* Sector 3 first = **reverse** (`DIR_REVERSE`)
+* Once resolved, direction is locked and sector lines are remapped internally so timing stays correct
+
+```c
+  int getDirection() const;        // DIR_UNKNOWN (0), DIR_FORWARD (1), DIR_REVERSE (2)
+  bool isDirectionResolved() const; // True once direction is known
+```
+
 ## Examples
 * [WokWi Emulator (basic oled example)](https://wokwi.com/projects/367029104171726849)
   * Includes 4 laps of data
@@ -187,7 +386,7 @@ Now if you want any running information,  you have the following...
     * Too tired to make serial only logger, but you can very easily remove it.
   * Borb load screen
 * [Sector Timing Example](examples/sector_timing_example/sector_timing_example.ino)
-  * **NEW!** Demonstrates sector split timing functionality
+  * Demonstrates sector split timing functionality
   * Shows how to configure sector 2 and sector 3 lines
   * Displays best sector times and optimal lap calculation
   * Tracks which lap achieved each best sector time
@@ -200,11 +399,17 @@ Now if you want any running information,  you have the following...
     * DovesTimer: 1:08:748 (LINEAR)
     * DovesTimer: 1:08.745 (CATMULLROM)
 
+## Memory Usage
+
+During course detection, the library uses up to ~24 KB of RAM (8 course timers running simultaneously). After detection completes, call `pruneInactiveCourses()` to deactivate unused timers and drop to ~5 KB.
+
+If using `DovesLapTimer` standalone (no `CourseManager`), memory usage is much lower - just the single timer instance with its crossing point buffer (100 entries on boards with >3KB RAM, 25 entries otherwise).
+
 ## License
 
-This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.org/wiki/MIT_License).
+This library is [licensed](LICENSE) under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
-## Dependicies
+## Dependencies
 * Auto-Included/Required
   * [ArxTypeTraits](https://github.com/hideakitai/ArxTypeTraits/actions)
 * Nice To Use / Used in examples
