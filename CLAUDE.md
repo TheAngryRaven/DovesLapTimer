@@ -123,9 +123,11 @@ CourseManager (orchestrator)
 - `pruneInactiveCourses()` deactivates non-detected timers to save memory
 
 ### Memory Management
-- Circular buffer `crossingPointBuffer` sized by available RAM:
-  - `>3000 bytes RAM`: 100 entries
-  - `<=3000 bytes RAM`: 25 entries
+- Circular buffer `crossingPointBuffer` sized per platform:
+  - Classic AVR with `RAMEND - RAMSTART > 3000` (e.g., Mega): 100 entries
+  - Classic AVR with `RAMEND - RAMSTART <= 3000` (e.g., Uno): 25 entries
+  - Any non-AVR (`RAMEND`/`RAMSTART` undefined — nRF52, ESP32, SAMD, RP2040): 100 entries
+- Buffer is reset (memset + index=0) at the end of every crossing — wraparound within a single crossing is a non-concern at kart speeds
 - Buffer is shared between all line crossings (start/finish + sectors)
 - Mutual exclusion: only one line can be "crossing" at a time
 - CourseManager peak: ~24 KB during detection (8 courses), drops to ~5 KB after pruning
@@ -256,13 +258,15 @@ struct TrackConfig {
 ## Known Issues & TODOs (from code comments)
 
 1. ~~**Catmull-Rom interpolation bug**~~: Fixed - spline now only used for lat/lng (not time/odometer), and previous GPS fix inserted as pre-crossing control point
-2. **Altitude messing up distance**: `loop()` line 27 has TODO: "I think alt is messing up, investigate more... maybe flag?"
-3. **Early abort bug**: checkStartFinish line 148-149 TODO about aborting early causing re-check immediately
-4. **`checkStartFinish` portability**: Line 106 TODO to make more portable for split timing
+2. **Altitude messing up distance**: `loop()` has a TODO: "I think alt is messing up, investigate more... maybe flag?"
+3. ~~**Early abort bug**~~: Abandoned — commented-out `crossingStartedLineSide` tracking plus the `CROSSING_LINE_SIDE_NONE` define have been removed; the underlying "abort early" optimization was never implemented and the current hypotenuse-threshold flow is reliable in practice.
+4. **`checkStartFinish` portability**: TODO at the top of `checkStartFinish` to make more portable for split timing
 5. ~~**License mismatch**~~: Resolved - GPL v3, library.properties updated
 6. ~~**Header comment outdated**~~: Fixed - updated to mention 3-sector timing
-7. ~~**No keywords.txt**~~: Added
+7. ~~**No keywords.txt**~~: Added (refreshed 2026-04-17 for full v4.0 API coverage)
 8. ~~**No .gitignore**~~: Added
+9. **nRF52840 RAM budget unaffected by AVR macros**: `DovesLapTimer.h` buffer-size `#if` now uses `defined(RAMEND) && defined(RAMSTART)` as the AVR detection gate; non-AVR targets get the 100-entry buffer unconditionally.
+10. **Haversine hot-path micro-opt (2026-04-17)**: `pow(x, 2)` replaced with `x*x` in `GeoMath.h::geoHaversine` and `DovesLapTimer.cpp::pointLineSegmentDistance` for consistency with the existing `sq()` usage elsewhere — same output, fewer library calls.
 
 ## Supported Hardware
 

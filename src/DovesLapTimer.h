@@ -12,7 +12,6 @@
 #include "ArxTypeTraits.h"
 using TRITYPE = double;
 
-#define CROSSING_LINE_SIDE_NONE -100
 #define CROSSING_LINE_SIDE_A -1
 #define CROSSING_LINE_SIDE_EXACT 0
 #define CROSSING_LINE_SIDE_B 1
@@ -523,7 +522,6 @@ private:
   float currentSpeedkmh = 0.0;
   int bestLapNumber = 0;
   int laps = 0;
-  int crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 
   // Sector timing state
   int currentSector = 0;  // 0=not started, 1/2/3=in sector
@@ -584,11 +582,18 @@ private:
   // Earth's radius in meters
   static constexpr double radiusEarth = 6371.0 * 1000;
 
-  // HOTFIX for low memory systems, could be expanded with more testing
-  #if ((RAMEND - RAMSTART) > 3000 )
-    static const int crossingPointBufferSize = 100;
+  // Buffer sizing: AVR exposes RAMEND/RAMSTART so we can tell a Mega (8KB) from a Uno (2KB).
+  // On modern 32-bit cores (nRF52, ESP32, SAMD, RP2040, etc.) those macros are undefined
+  // and would silently evaluate to 0 - defaulting such targets to the small buffer would
+  // defeat the whole point of the hotfix. Assume anyone not on classic AVR has plenty of RAM.
+  #if defined(RAMEND) && defined(RAMSTART)
+    #if ((RAMEND - RAMSTART) > 3000)
+      static const int crossingPointBufferSize = 100;
+    #else
+      static const int crossingPointBufferSize = 25;
+    #endif
   #else
-    static const int crossingPointBufferSize = 25;
+    static const int crossingPointBufferSize = 100;
   #endif
 
   crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];

@@ -7,20 +7,35 @@
 #######################################
 
 DovesLapTimer	KEYWORD1
+CourseManager	KEYWORD1
+CourseDetector	KEYWORD1
+WaypointLapTimer	KEYWORD1
+DirectionDetector	KEYWORD1
+TrackConfig	KEYWORD1
+CourseConfig	KEYWORD1
+CourseInfo	KEYWORD1
+CourseTimerEntry	KEYWORD1
+DetectionCandidate	KEYWORD1
 crossingPointBufferEntry	KEYWORD1
+ProximityBufferEntry	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
 
+# Shared / core
 loop	KEYWORD2
+reset	KEYWORD2
+updateCurrentTime	KEYWORD2
+
+# DovesLapTimer — line / sector setup
 setStartFinishLine	KEYWORD2
 setSector2Line	KEYWORD2
 setSector3Line	KEYWORD2
-updateCurrentTime	KEYWORD2
 forceLinearInterpolation	KEYWORD2
 forceCatmullRomInterpolation	KEYWORD2
-reset	KEYWORD2
+
+# DovesLapTimer / WaypointLapTimer — timing getters
 getRaceStarted	KEYWORD2
 getCrossing	KEYWORD2
 getCurrentLapStartTime	KEYWORD2
@@ -35,6 +50,8 @@ getTotalDistanceTraveled	KEYWORD2
 getBestLapNumber	KEYWORD2
 getLaps	KEYWORD2
 getPaceDifference	KEYWORD2
+
+# DovesLapTimer — sector timing getters
 getBestSector1Time	KEYWORD2
 getBestSector2Time	KEYWORD2
 getBestSector3Time	KEYWORD2
@@ -47,18 +64,84 @@ getBestSector2LapNumber	KEYWORD2
 getBestSector3LapNumber	KEYWORD2
 getCurrentSector	KEYWORD2
 areSectorLinesConfigured	KEYWORD2
+
+# DovesLapTimer — direction detection
+getDirection	KEYWORD2
+isDirectionResolved	KEYWORD2
+
+# DovesLapTimer — geometry utilities
 insideLineThreshold	KEYWORD2
 pointLineSegmentDistance	KEYWORD2
+pointOnSideOfLine	KEYWORD2
+isObtuseTriangle	KEYWORD2
 haversine	KEYWORD2
 haversine3D	KEYWORD2
-isObtuseTriangle	KEYWORD2
-pointOnSideOfLine	KEYWORD2
+
+# CourseManager
+pruneInactiveCourses	KEYWORD2
+isDetectionComplete	KEYWORD2
+getActiveCourseIndex	KEYWORD2
+getActiveCourseName	KEYWORD2
+getCourseCount	KEYWORD2
+getDetectionRejectionCount	KEYWORD2
+getActiveTimer	KEYWORD2
+getLapAnythingTimer	KEYWORD2
+isLapAnythingActive	KEYWORD2
+getTrackName	KEYWORD2
+getShortName	KEYWORD2
+getDetector	KEYWORD2
+setSpeedThresholdMph	KEYWORD2
+setWaypointProximityMeters	KEYWORD2
+setDetectionProximityMeters	KEYWORD2
+
+# CourseDetector
+init	KEYWORD2
+update	KEYWORD2
+acceptCandidate	KEYWORD2
+rejectAllCandidates	KEYWORD2
+getState	KEYWORD2
+getDetectedCourseIndex	KEYWORD2
+isDetected	KEYWORD2
+hasWaypoint	KEYWORD2
+getWaypointLat	KEYWORD2
+getWaypointLng	KEYWORD2
+getRankedMatchCount	KEYWORD2
+getRankedMatches	KEYWORD2
+
+# WaypointLapTimer
+setProximityMeters	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
 
-CROSSING_LINE_SIDE_NONE	LITERAL1
+# Line-side enum (return values of pointOnSideOfLine)
 CROSSING_LINE_SIDE_A	LITERAL1
 CROSSING_LINE_SIDE_EXACT	LITERAL1
 CROSSING_LINE_SIDE_B	LITERAL1
+
+# Direction detection
+DIR_UNKNOWN	LITERAL1
+DIR_FORWARD	LITERAL1
+DIR_REVERSE	LITERAL1
+
+# Course detection state machine
+DETECT_STATE_IDLE	LITERAL1
+DETECT_STATE_WAITING_FOR_SPEED	LITERAL1
+DETECT_STATE_WAYPOINT_SET	LITERAL1
+DETECT_STATE_CANDIDATES_READY	LITERAL1
+DETECT_STATE_DETECTED	LITERAL1
+
+# Course detection tunables
+MAX_COURSES	LITERAL1
+COURSE_DETECT_SPEED_THRESHOLD_MPH	LITERAL1
+COURSE_DETECT_WAYPOINT_PROXIMITY_METERS	LITERAL1
+COURSE_DETECT_MIN_DISTANCE_METERS	LITERAL1
+COURSE_DETECT_DISTANCE_TOLERANCE_PCT	LITERAL1
+COURSE_DETECT_MAX_REJECTIONS	LITERAL1
+METERS_TO_FEET	LITERAL1
+
+# Waypoint lap timer tunables
+WAYPOINT_LAP_MIN_DISTANCE_METERS	LITERAL1
+WAYPOINT_LAP_PROXIMITY_METERS	LITERAL1
+WAYPOINT_LAP_BUFFER_SIZE	LITERAL1
