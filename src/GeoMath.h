@@ -21,10 +21,10 @@ static inline double geoHaversine(double lat1, double lon1, double lat2, double 
   double lat2Rad = lat2 * M_PI / 180.0;
   double lon2Rad = lon2 * M_PI / 180.0;
 
-  double deltaLat = lat2Rad - lat1Rad;
-  double deltaLon = lon2Rad - lon1Rad;
+  double sinHalfDLat = sin((lat2Rad - lat1Rad) / 2);
+  double sinHalfDLon = sin((lon2Rad - lon1Rad) / 2);
 
-  double a = pow(sin(deltaLat / 2), 2) + cos(lat1Rad) * cos(lat2Rad) * pow(sin(deltaLon / 2), 2);
+  double a = sinHalfDLat * sinHalfDLat + cos(lat1Rad) * cos(lat2Rad) * sinHalfDLon * sinHalfDLon;
   double c = 2 * atan2(sqrt(a), sqrt(1 - a));
 
   return GEOMATH_RADIUS_EARTH * c;

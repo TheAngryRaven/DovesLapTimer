@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(arduino-cli compile:*)",
+      "Bash(arduino-cli board:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

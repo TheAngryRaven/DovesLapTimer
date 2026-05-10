@@ -116,61 +116,28 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
 
 // TODO: update function to be a bit more portable to allow for split timing
 bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
-  // // dbg
-  // double tempDist = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
-  // if (tempDist < crossingThresholdMeters) {
-  //   bool isObt = isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
-  //   bool insideFancyTriangle = insideLineThreshold(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
-  //   debug(F(" | distToLine: "));
-  //   debug(tempDist);
-  //   debug(F(" | isObtuseTriangle: "));
-  //   debug(isObt ? "True" : "False");
-  //   debug(F(" | insideFancyTriangle: "));
-  //   debugln(insideFancyTriangle ? "True" : "False");
-  // }
-  // return false;
-  // // dbg
-
   double distToLine = INFINITY;
-  /**
-   * I don't believe this will be entirely great for the long term... let me explain...
-   *
-   * As the user approaches the crossing line, they should form an acute triangle roughly 10m out... in theory
-   * This starts the crossing algo, once enabled the type of triangle no longer matters
-   * Once we are threshold+1 away, interpolate crossing point
-   *
-   * The problem is, i don't believe this can be entirely reliable,
-   * Tt does appear to work on both short and long track configurations at OKC in its current state, but unsure for the future...
-   */
-  // if (crossing || !isObtuseTriangle(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
 
   /**
-   * I think this newer method might work a bit better
+   * Crossing-line detection: hypotenuse threshold method
    *
-   * This new method instead uses the width of the crossing line, and the "crossingThresholdMeters" to form a right triangle
-   * This calculated hypotnuse is now the new "threshold" of sorts
-   * We then "draw" a line from the driver to each of the crossing points
-   * If either line drawn is longer than the hypotnuse, we are not in the "crossingThreshold"
+   * Using the width of the crossing line and "crossingThresholdMeters" to form a right triangle,
+   * the calculated hypotenuse is the effective proximity threshold. We measure from the driver
+   * to each crossing point; if either distance exceeds the hypotenuse, we are not in the zone.
+   *
+   * Earlier experiments used acute/obtuse-triangle detection (see isObtuseTriangle), which
+   * worked on OKC but felt brittle. Hypotenuse-based threshold has been more reliable across
+   * short and long track configurations.
    */
   if (crossing || insideLineThreshold(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
     distToLine = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
   }
-
-  // todo: Aborting early results in a bug where it starts checking the crossing immediately after processing
-  // todo: this also causes catmulrom to fail as were missing a control point...
-  // int currentLineSide = pointOnSideOfLine(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
-  // if (crossing) {
-  //   if (crossingStartedLineSide == CROSSING_LINE_SIDE_NONE) {   
-  //     distToLine = INFINITY;
-  //   }
-  // }
 
   if (crossing) {
     // Check if we've moved out of the threshold area
     if (distToLine > crossingThresholdMeters + 1) {
       debugln(F("probably crossed, lets calculate"));
       crossing = false;
-      crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 
       // Interpolate the crossing point and its time
       double crossingLat = 0.0, crossingLng = 0.0, crossingOdometer = 0.0;
@@ -251,14 +218,6 @@ bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
       debug(F("]"));
       debug(F(" millisecondsSinceMidnight["));
       debugln(millisecondsSinceMidnight);
-
-      // debug(F("] currentLineSide: "));
-      // debugln(currentLineSide);
-      // if (crossing) {
-      //   if (currentLineSide != crossingStartedLineSide && currentLineSide != CROSSING_LINE_SIDE_EXACT) {
-      //     crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
-      //   }
-      // }
     }
   } else {
     if (distToLine < crossingThresholdMeters) {
@@ -369,7 +328,9 @@ int DovesLapTimer::pointOnSideOfLine(double driverLat, double driverLng, double 
 }
 
 double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, double startX, double startY, double endX, double endY) {
-  double segmentLengthSquared = pow(endX - startX, 2) + pow(endY - startY, 2);
+  double dx = endX - startX;
+  double dy = endY - startY;
+  double segmentLengthSquared = dx * dx + dy * dy;
 
   // Use epsilon comparison for floating-point near-zero check
   // This handles degenerate line segments (start == end)
@@ -378,7 +339,7 @@ double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, dou
     return haversine(pointX, pointY, startX, startY);
   }
 
-  double projectionScalar = ((pointX - startX) * (endX - startX) + (pointY - startY) * (endY - startY)) / segmentLengthSquared;
+  double projectionScalar = ((pointX - startX) * dx + (pointY - startY) * dy) / segmentLengthSquared;
 
   double haversineStart = haversine(pointX, pointY, startX, startY);
   double haversineEnd = haversine(pointX, pointY, endX, endY);
@@ -392,8 +353,8 @@ double DovesLapTimer::pointLineSegmentDistance(double pointX, double pointY, dou
   }
 
   // The projection of the point is within the line segment
-  double projectedX = startX + projectionScalar * (endX - startX);
-  double projectedY = startY + projectionScalar * (endY - startY);
+  double projectedX = startX + projectionScalar * dx;
+  double projectedY = startY + projectionScalar * dy;
   return haversine(pointX, pointY, projectedX, projectedY);
 }
 
@@ -834,7 +795,6 @@ void DovesLapTimer::reset() {
   crossingPointBufferIndex = 0;
   crossingPointBufferFull = false;
   memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
-  crossingStartedLineSide = CROSSING_LINE_SIDE_NONE;
 }
 void DovesLapTimer::setStartFinishLine(double pointALat, double pointALng, double pointBLat, double pointBLng) {
   startFinishPointALat = pointALat;
