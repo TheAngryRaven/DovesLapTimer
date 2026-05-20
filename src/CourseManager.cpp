@@ -122,14 +122,14 @@ int CourseManager::loop(double lat, double lng, float altMeters, float speedKnot
 
     // Handle candidates_ready state
     if (_detector.getState() == DETECT_STATE_CANDIDATES_READY) {
-      _handleCandidatesReady();
+      _handleCandidatesReady(odometer);
     }
   }
 
   return -1;
 }
 
-void CourseManager::_handleCandidatesReady() {
+void CourseManager::_handleCandidatesReady(float currentOdometer) {
   int matchCount = _detector.getRankedMatchCount();
   const DetectionCandidate* matches = _detector.getRankedMatches();
 
@@ -146,8 +146,10 @@ void CourseManager::_handleCandidatesReady() {
     }
   }
 
-  // No candidate had raceStarted — reject all
-  _detector.rejectAllCandidates();
+  // No candidate had raceStarted — reject all. Pass current odometer so the
+  // detector advances its lap-window origin; otherwise the next GPS fix
+  // would re-rank the same candidates and we'd burn the rejection budget.
+  _detector.rejectAllCandidates(currentOdometer);
   _detectionRejectionCount++;
   debug(F("Detection rejected ("));
   debug(_detectionRejectionCount);

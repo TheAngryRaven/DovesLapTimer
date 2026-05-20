@@ -515,8 +515,18 @@ void DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
 
 /////////// direction detection
 
-void DirectionDetector::onLineCrossing(int sectorNumber) {
+void DirectionDetector::onLineCrossing(int sectorNumber, unsigned long crossingTime) {
   if (sectorNumber == 0) {
+    // Start/finish crossed. If we've collected both S2 and S3 timestamps in
+    // the current lap window, resolve direction from their temporal order.
+    // Single-sector laps (driver missed a poorly-placed line, or GPS rate
+    // too low to catch the zone) are discarded and re-tried next lap.
+    if (raceSeen && direction == DIR_UNKNOWN
+        && lapS2CrossingTime != 0 && lapS3CrossingTime != 0) {
+      direction = (lapS2CrossingTime < lapS3CrossingTime) ? DIR_FORWARD : DIR_REVERSE;
+    }
+    lapS2CrossingTime = 0;
+    lapS3CrossingTime = 0;
     raceSeen = true;
     return;
   }
@@ -529,10 +539,12 @@ void DirectionDetector::onLineCrossing(int sectorNumber) {
     return;
   }
 
+  // Latest crossing wins inside a lap so a phantom glitch early in the lap
+  // gets overwritten by the real crossing later on.
   if (sectorNumber == 2) {
-    direction = DIR_FORWARD;
+    lapS2CrossingTime = crossingTime;
   } else if (sectorNumber == 3) {
-    direction = DIR_REVERSE;
+    lapS3CrossingTime = crossingTime;
   }
 }
 
@@ -544,8 +556,9 @@ void DovesLapTimer::handleLineCrossing(unsigned long crossingTime, int sectorNum
     return;
   }
 
-  // Feed direction detector with raw (physical) sector number
-  _directionDetector.onLineCrossing(sectorNumber);
+  // Feed direction detector with raw (physical) sector number and crossing
+  // time so it can compare S2 vs S3 timestamps to infer direction.
+  _directionDetector.onLineCrossing(sectorNumber, crossingTime);
 
   // Remap sector number for reverse direction (swap 2<->3)
   int effectiveSector = sectorNumber;

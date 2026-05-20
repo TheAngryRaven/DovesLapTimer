@@ -33,7 +33,10 @@ public:
   void init(CourseInfo* courses, int count);
   void update(double lat, double lng, float speedKmh, float totalOdometer);
   void acceptCandidate(int index);
-  void rejectAllCandidates();
+  // currentOdometer advances the waypoint's lap-window start so the next
+  // ranking pass requires another full lap, rather than immediately
+  // re-ranking while still in proximity.
+  void rejectAllCandidates(float currentOdometer);
   void reset();
   void setSpeedThresholdMph(float mph);
   void setDetectionProximityMeters(float meters);

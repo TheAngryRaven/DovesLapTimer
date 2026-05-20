@@ -85,7 +85,7 @@ private:
   }
 
   void _initCourses(TrackConfig& config);
-  void _handleCandidatesReady();
+  void _handleCandidatesReady(float currentOdometer);
   void _activateLapAnything();
 
   Stream *_serial;

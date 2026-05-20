@@ -56,10 +56,22 @@ struct crossingPointBufferEntry {
 struct DirectionDetector {
   int direction;    // DIR_UNKNOWN, DIR_FORWARD, DIR_REVERSE
   bool raceSeen;
+  // Per-lap window: timestamps of physical S2/S3 crossings since the last
+  // start/finish. Direction is decided only when BOTH are present, by their
+  // temporal order — independent of the lap calculation's sector output.
+  unsigned long lapS2CrossingTime;
+  unsigned long lapS3CrossingTime;
 
-  DirectionDetector() : direction(DIR_UNKNOWN), raceSeen(false) {}
-  void reset() { direction = DIR_UNKNOWN; raceSeen = false; }
-  void onLineCrossing(int sectorNumber);
+  DirectionDetector()
+    : direction(DIR_UNKNOWN), raceSeen(false),
+      lapS2CrossingTime(0), lapS3CrossingTime(0) {}
+  void reset() {
+    direction = DIR_UNKNOWN;
+    raceSeen = false;
+    lapS2CrossingTime = 0;
+    lapS3CrossingTime = 0;
+  }
+  void onLineCrossing(int sectorNumber, unsigned long crossingTime);
   bool isReverse() const { return direction == DIR_REVERSE; }
   bool isResolved() const { return direction != DIR_UNKNOWN; }
 };
