@@ -63,6 +63,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Seeed nRF52 BSP shells out to adafruit-nrfutil during link to package
+      # the .hex into a .zip, even when we're only compiling — so install it
+      # before the compile step on the XIAO matrix cell.
+      - name: Install adafruit-nrfutil (XIAO only)
+        if: matrix.board.alias == 'xiao-nrf52840'
+        run: pip install --user adafruit-nrfutil
+
       - name: Compile sketches
         uses: arduino/compile-sketches@v1
         with:
@@ -75,6 +82,7 @@ jobs:
             - name: Adafruit GFX Library
             - name: Adafruit SSD1306
             - name: Adafruit SH110X
+            - name: Adafruit TinyUSB Library
           sketch-paths: ${{ matrix.board.sketch-paths }}
           enable-deltas-report: true
 

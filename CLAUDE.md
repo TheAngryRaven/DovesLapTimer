@@ -313,7 +313,10 @@ GitHub Actions workflows live in `.github/workflows/`:
     Adafruit-based nrf52 core, not the older mbed core, since that's what real XIAO
     users compile against and it matches the FPU/double-precision pitch in the README)
   - Pulled libs: ArxTypeTraits, Adafruit GPS Library, Adafruit GFX, Adafruit SSD1306,
-    Adafruit SH110X
+    Adafruit SH110X, Adafruit TinyUSB Library (last one needed so the Seeed nRF52
+    BSP's `Serial`/`Adafruit_USBD_CDC` references resolve at link time)
+  - Pre-compile step `pip install --user adafruit-nrfutil` runs only on the XIAO
+    cell — the BSP's link recipe shells out to it even at compile-only time
   - `enable-deltas-report: true` uploads `sketches-reports/` so PRs surface flash/SRAM deltas
 
 Both workflows trigger on push to `main`/`master`, on any PR, and manually via
