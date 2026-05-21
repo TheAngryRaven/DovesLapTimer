@@ -116,141 +116,147 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
 
 // TODO: update function to be a bit more portable to allow for split timing
 bool DovesLapTimer::checkStartFinish(double currentLat, double currentLng) {
-  double distToLine = INFINITY;
+  double cLat = 0.0, cLng = 0.0, cOdo = 0.0;
+  unsigned long cTime = 0;
 
-  /**
-   * Crossing-line detection: hypotenuse threshold method
-   *
-   * Using the width of the crossing line and "crossingThresholdMeters" to form a right triangle,
-   * the calculated hypotenuse is the effective proximity threshold. We measure from the driver
-   * to each crossing point; if either distance exceeds the hypotenuse, we are not in the zone.
-   *
-   * Earlier experiments used acute/obtuse-triangle detection (see isObtuseTriangle), which
-   * worked on OKC but felt brittle. Hypotenuse-based threshold has been more reliable across
-   * short and long track configurations.
-   */
-  if (crossing || insideLineThreshold(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng)) {
-    distToLine = pointLineSegmentDistance(currentLat, currentLng, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+  LineDetectResult ev = _detectLineCrossing(
+      currentLat, currentLng,
+      startFinishPointALat, startFinishPointALng,
+      startFinishPointBLat, startFinishPointBLng,
+      crossing,
+      0,
+      cLat, cLng, cTime, cOdo);
+
+  if (ev == LINE_DETECT_COMPLETED && cTime != 0) {
+    if (raceStarted) {
+      laps++;
+      unsigned long lapTime = cTime - currentLapStartTime;
+      double lapDistance = cOdo - currentLapOdometerStart;
+
+      debug(F("Lap Finish Time: "));
+      debug(lapTime);
+      debug(F(" : "));
+      debugln((double)(lapTime / 1000.0), 3);
+
+      lastLapTime = lapTime;
+      lastLapDistance = lapDistance;
+      if (bestLapTime <= 0 || lastLapTime < bestLapTime) {
+        bestLapTime = lastLapTime;
+        bestLapDistance = lastLapDistance;
+        bestLapNumber = laps;
+      }
+    } else {
+      raceStarted = true;
+      debugln(F("Race Started"));
+    }
+    currentLapStartTime = cTime;
+    currentLapOdometerStart = cOdo;
+    handleLineCrossing(cTime, 0);
   }
 
-  if (crossing) {
-    // Check if we've moved out of the threshold area
+  return ev == LINE_DETECT_IN_ZONE;
+}
+
+/**
+ * Crossing-line detection: hypotenuse threshold method.
+ *
+ * Using the width of the crossing line and "crossingThresholdMeters" to form
+ * a right triangle, the calculated hypotenuse is the effective proximity
+ * threshold. We measure from the driver to each crossing point; if either
+ * distance exceeds the hypotenuse we are not in the zone.
+ *
+ * Earlier experiments used acute/obtuse-triangle detection (see
+ * isObtuseTriangle), which worked on OKC but felt brittle. Hypotenuse-based
+ * threshold has been more reliable across short and long track configurations.
+ */
+LineDetectResult DovesLapTimer::_detectLineCrossing(
+    double currentLat, double currentLng,
+    double pointALat, double pointALng,
+    double pointBLat, double pointBLng,
+    bool& crossingFlag,
+    int lineLabel,
+    double& outLat, double& outLng,
+    unsigned long& outTime,
+    double& outOdometer) {
+  double distToLine = INFINITY;
+
+  if (crossingFlag || insideLineThreshold(currentLat, currentLng, pointALat, pointALng, pointBLat, pointBLng)) {
+    distToLine = pointLineSegmentDistance(currentLat, currentLng, pointALat, pointALng, pointBLat, pointBLng);
+  }
+
+  if (crossingFlag) {
     if (distToLine > crossingThresholdMeters + 1) {
-      debugln(F("probably crossed, lets calculate"));
-      crossing = false;
+      // Exited the zone — interpolate, reset buffer, report completion.
+      debug(F("Line "));
+      debug(lineLabel);
+      debugln(F(" crossed, calculating..."));
+      crossingFlag = false;
 
-      // Interpolate the crossing point and its time
-      double crossingLat = 0.0, crossingLng = 0.0, crossingOdometer = 0.0;
-      unsigned long crossingTime = 0;
-      interpolateCrossingPoint(crossingLat, crossingLng, crossingTime, crossingOdometer, startFinishPointALat, startFinishPointALng, startFinishPointBLat, startFinishPointBLng);
+      outLat = 0.0; outLng = 0.0; outOdometer = 0.0; outTime = 0;
+      interpolateCrossingPoint(outLat, outLng, outTime, outOdometer,
+                                pointALat, pointALng, pointBLat, pointBLng);
 
-      if (crossingTime != 0) {
-        debug(F("crossingLat: "));
-        debugln(crossingLat, 6);
-        debug(F("crossingLng: "));
-        debugln(crossingLng, 6);
-        debug(F("crossingOdometer: "));
-        debugln(crossingOdometer);
-        debug(F("crossingTime: "));
-        debugln(crossingTime);
-
-        if (raceStarted) {
-          // increment lap counter
-          laps++;
-          // calculate lapTime
-          unsigned long lapTime = crossingTime - currentLapStartTime;
-          double lapDistance = crossingOdometer - currentLapOdometerStart;
-          // Update the start time for the next lap
-          currentLapStartTime = crossingTime;
-          currentLapOdometerStart = crossingOdometer;
-
-          // Process the lap time (e.g., display it, store it, etc.)
-          debug(F("Lap Finish Time: "));
-          debug(lapTime);
-          debug(F(" : "));
-          debugln((double)(lapTime/1000.0), 3);
-
-          // log best and last time
-          lastLapTime = lapTime;
-          lastLapDistance = lapDistance;
-          if(bestLapTime <= 0 || lastLapTime < bestLapTime) {
-            bestLapTime = lastLapTime;
-            bestLapDistance = lastLapDistance;
-            bestLapNumber = laps;
-          }
-
-          // Handle sector timing if configured
-          handleLineCrossing(crossingTime, 0);
-        } else {
-          currentLapStartTime = crossingTime;
-          currentLapOdometerStart = crossingOdometer;
-          raceStarted = true;
-          debugln(F("Race Started"));
-
-          // Handle sector timing if configured (start sector 1)
-          handleLineCrossing(crossingTime, 0);
-        }
+      if (outTime != 0) {
+        debug(F("  crossingLat: "));  debugln(outLat, 6);
+        debug(F("  crossingLng: "));  debugln(outLng, 6);
+        debug(F("  crossingOdometer: ")); debugln(outOdometer);
+        debug(F("  crossingTime: ")); debugln(outTime);
       }
 
-      // Reset the crossingPointBuffer index and full status
       crossingPointBufferIndex = 0;
       crossingPointBufferFull = false;
       memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
-    } else {
-      // Update the crossingPointBuffer with the current GPS fix
-      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
-      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
-      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
-      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
-      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
-
-      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-      if (crossingPointBufferIndex == 0) {
-        crossingPointBufferFull = true;
-      }
-
-      debug(F("distToLine: "));
-      debug(distToLine);
-      debug(F(" | crossing = true, add to crossingPointBuffer: index["));
-      debug(crossingPointBufferIndex);
-      debug(F("] full["));
-      debug(crossingPointBufferFull == true ? "True" : "False");
-      debug(F("]"));
-      debug(F(" millisecondsSinceMidnight["));
-      debugln(millisecondsSinceMidnight);
+      return LINE_DETECT_COMPLETED;
     }
-  } else {
-    if (distToLine < crossingThresholdMeters) {
-      debugln();
-      debugln(F("we are possibly crossing"));
-      crossing = true;
 
-      // Insert previous GPS fix as pre-crossing point (gives Catmull-Rom its p0 control point)
-      if (hasPrevFix) {
-        crossingPointBuffer[crossingPointBufferIndex].lat = prevFixLat;
-        crossingPointBuffer[crossingPointBufferIndex].lng = prevFixLng;
-        crossingPointBuffer[crossingPointBufferIndex].time = prevFixTime;
-        crossingPointBuffer[crossingPointBufferIndex].odometer = prevFixOdometer;
-        crossingPointBuffer[crossingPointBufferIndex].speedKmh = prevFixSpeedKmh;
-        crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-      }
+    // Still in zone — buffer this fix.
+    crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+    crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+    crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+    crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+    crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+    crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
+    if (crossingPointBufferIndex == 0) crossingPointBufferFull = true;
 
-      // Capture current point
-      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
-      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
-      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
-      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
-      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
-      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-    }
+    debug(F("Line "));
+    debug(lineLabel);
+    debug(F(" distToLine: "));
+    debug(distToLine);
+    debug(F(" | buffering index["));
+    debug(crossingPointBufferIndex);
+    debug(F("] full["));
+    debugln(crossingPointBufferFull ? F("True") : F("False"));
+    return LINE_DETECT_IN_ZONE;
   }
 
-  // return simple flag to eventually allow to split timing
-  if (crossing || distToLine < crossingThresholdMeters) {
-    return true;
-  } else {
-    return false;
+  if (distToLine < crossingThresholdMeters) {
+    // Entering the zone for the first time this approach.
+    debug(F("Entering line "));
+    debug(lineLabel);
+    debugln(F(" crossing zone"));
+    crossingFlag = true;
+
+    // Insert previous GPS fix as pre-crossing point — gives Catmull-Rom its p0.
+    if (hasPrevFix) {
+      crossingPointBuffer[crossingPointBufferIndex].lat = prevFixLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = prevFixLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = prevFixTime;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = prevFixOdometer;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = prevFixSpeedKmh;
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
+    }
+
+    // Capture current point.
+    crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+    crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+    crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+    crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+    crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+    crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
+    return LINE_DETECT_IN_ZONE;
   }
+
+  return LINE_DETECT_NONE;
 }
 
 bool DovesLapTimer::insideLineThreshold(double driverLat, double driverLon, double crossingPointALat, double crossingPointALon, double crossingPointBLat, double crossingPointBLon) {
@@ -666,92 +672,25 @@ void DovesLapTimer::updateBestSectors() {
   }
 }
 
-bool DovesLapTimer::checkSectorLine(double currentLat, double currentLng, double pointALat, double pointALng, double pointBLat, double pointBLng, bool& crossingFlag, int sectorNumber) {
-  double distToLine = INFINITY;
+bool DovesLapTimer::checkSectorLine(double currentLat, double currentLng,
+                                    double pointALat, double pointALng,
+                                    double pointBLat, double pointBLng,
+                                    bool& crossingFlag, int sectorNumber) {
+  double cLat = 0.0, cLng = 0.0, cOdo = 0.0;
+  unsigned long cTime = 0;
 
-  // Same logic as checkStartFinish but for sector lines
-  if (crossingFlag || insideLineThreshold(currentLat, currentLng, pointALat, pointALng, pointBLat, pointBLng)) {
-    distToLine = pointLineSegmentDistance(currentLat, currentLng, pointALat, pointALng, pointBLat, pointBLng);
+  LineDetectResult ev = _detectLineCrossing(
+      currentLat, currentLng,
+      pointALat, pointALng, pointBLat, pointBLng,
+      crossingFlag,
+      sectorNumber,
+      cLat, cLng, cTime, cOdo);
+
+  if (ev == LINE_DETECT_COMPLETED && cTime != 0 && raceStarted) {
+    handleLineCrossing(cTime, sectorNumber);
   }
 
-  if (crossingFlag) {
-    // Check if we've moved out of the threshold area
-    if (distToLine > crossingThresholdMeters + 1) {
-      debug(F("Sector "));
-      debug(sectorNumber);
-      debugln(F(" crossed, calculating..."));
-
-      crossingFlag = false;
-
-      // Interpolate the crossing point and its time
-      double crossingLat = 0.0, crossingLng = 0.0, crossingOdometer = 0.0;
-      unsigned long crossingTime = 0;
-      interpolateCrossingPoint(crossingLat, crossingLng, crossingTime, crossingOdometer, pointALat, pointALng, pointBLat, pointBLng);
-
-      if (crossingTime != 0 && raceStarted) {
-        debug(F("Sector "));
-        debug(sectorNumber);
-        debug(F(" crossingTime: "));
-        debugln(crossingTime);
-
-        // Handle the sector crossing
-        handleLineCrossing(crossingTime, sectorNumber);
-      }
-
-      // Reset the crossingPointBuffer index and full status
-      crossingPointBufferIndex = 0;
-      crossingPointBufferFull = false;
-      memset(crossingPointBuffer, 0, sizeof(crossingPointBuffer));
-    } else {
-      // Update the crossingPointBuffer with the current GPS fix
-      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
-      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
-      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
-      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
-      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
-
-      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-      if (crossingPointBufferIndex == 0) {
-        crossingPointBufferFull = true;
-      }
-
-      debug(F("Sector "));
-      debug(sectorNumber);
-      debug(F(" distToLine: "));
-      debug(distToLine);
-      debug(F(" | buffering index["));
-      debug(crossingPointBufferIndex);
-      debugln(F("]"));
-    }
-  } else {
-    if (distToLine < crossingThresholdMeters) {
-      debug(F("Entering Sector "));
-      debug(sectorNumber);
-      debugln(F(" crossing zone"));
-      crossingFlag = true;
-
-      // Insert previous GPS fix as pre-crossing point (gives Catmull-Rom its p0 control point)
-      if (hasPrevFix) {
-        crossingPointBuffer[crossingPointBufferIndex].lat = prevFixLat;
-        crossingPointBuffer[crossingPointBufferIndex].lng = prevFixLng;
-        crossingPointBuffer[crossingPointBufferIndex].time = prevFixTime;
-        crossingPointBuffer[crossingPointBufferIndex].odometer = prevFixOdometer;
-        crossingPointBuffer[crossingPointBufferIndex].speedKmh = prevFixSpeedKmh;
-        crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-      }
-
-      // Capture current point
-      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
-      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
-      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
-      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
-      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
-      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
-    }
-  }
-
-  // Return true if near or crossing the line
-  return crossingFlag || distToLine < crossingThresholdMeters;
+  return ev == LINE_DETECT_IN_ZONE;
 }
 
 /////////// getters and setters
