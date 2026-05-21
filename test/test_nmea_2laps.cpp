@@ -2,17 +2,21 @@
  * Layer-3 NMEA replay regression test.
  *
  * Fixture: examples/real_track_data_debug/gps_race_data_2laps.h
- *   Orlando Kart Center, two laps, white Tony rental.
+ *   Orlando Kart Center, two laps, white Tony rental. (Recording actually
+ *   continues a few seconds into a third lap.)
  *
- * Golden times (from fixture header):
- *   LAP 1
- *     DoveTimer LINEAR  : 1:09.958 ms (69958)
- *     DoveTimer CATMULL : 1:09.942 ms (69942)
- *     MyLaps            : not recorded
- *   LAP 2
- *     MyLaps            : 1:08.807 ms (68807) — magnetic-loop ground truth
- *     DoveTimer LINEAR  : 1:08.748 ms (68748)
- *     DoveTimer CATMULL : 1:08.745 ms (68745)
+ * Golden times (current library output, captured 2026-05-21):
+ *   LAP 1: 69961 ms (linear == catmull)
+ *   LAP 2: 68742 ms (linear == catmull)
+ *
+ * Lap times are identical between modes because Catmull-Rom is scoped to
+ * crossing-point lat/lng only — time/odometer are always interpolated
+ * linearly (CLAUDE.md known-issue #1). Fixture-header values from
+ * pre-2026 captures (LINEAR 69958/68748, CATMULL 69942/68745) predate
+ * that scope fix and no longer represent current behavior.
+ *
+ * MyLaps magnetic-loop ground truth on LAP 2: 68807 ms — checked with
+ * a looser ±200ms bound.
  */
 
 #include "test_runner.h"
@@ -30,8 +34,6 @@ static ReplayConfig makeCfg(bool catmull) {
 }
 
 void test_linear_completes_two_laps() {
-  // Fixture is named "two laps" but the recording continues a few seconds
-  // into a third lap. Golden values only cover laps 1 and 2 — assert >= 2.
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(false));
   EXPECT_TRUE((int)r.lapTimes.size() >= 2);
 }
@@ -39,13 +41,13 @@ void test_linear_completes_two_laps() {
 void test_linear_lap1_matches_golden() {
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(false));
   EXPECT_TRUE(r.lapTimes.size() >= 1);
-  if (r.lapTimes.size() >= 1) EXPECT_NEAR(r.lapTimes[0], 69958UL, 50.0);
+  if (r.lapTimes.size() >= 1) EXPECT_NEAR(r.lapTimes[0], 69961UL, 10.0);
 }
 
 void test_linear_lap2_matches_golden() {
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(false));
   EXPECT_TRUE(r.lapTimes.size() >= 2);
-  if (r.lapTimes.size() >= 2) EXPECT_NEAR(r.lapTimes[1], 68748UL, 50.0);
+  if (r.lapTimes.size() >= 2) EXPECT_NEAR(r.lapTimes[1], 68742UL, 10.0);
 }
 
 void test_linear_lap2_close_to_mylaps() {
@@ -62,19 +64,23 @@ void test_catmull_completes_two_laps() {
 void test_catmull_lap1_matches_golden() {
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
   EXPECT_TRUE(r.lapTimes.size() >= 1);
-  if (r.lapTimes.size() >= 1) EXPECT_NEAR(r.lapTimes[0], 69942UL, 50.0);
+  if (r.lapTimes.size() >= 1) EXPECT_NEAR(r.lapTimes[0], 69961UL, 10.0);
 }
 
 void test_catmull_lap2_matches_golden() {
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
   EXPECT_TRUE(r.lapTimes.size() >= 2);
-  if (r.lapTimes.size() >= 2) EXPECT_NEAR(r.lapTimes[1], 68745UL, 50.0);
+  if (r.lapTimes.size() >= 2) EXPECT_NEAR(r.lapTimes[1], 68742UL, 10.0);
 }
 
-void test_catmull_lap2_close_to_mylaps() {
-  ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
-  EXPECT_TRUE(r.lapTimes.size() >= 2);
-  if (r.lapTimes.size() >= 2) EXPECT_NEAR(r.lapTimes[1], 68807UL, 200.0);
+void test_catmull_lap_times_match_linear() {
+  ReplayResult lin = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(false));
+  ReplayResult cat = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
+  EXPECT_TRUE(lin.lapTimes.size() >= 2 && cat.lapTimes.size() >= 2);
+  if (lin.lapTimes.size() >= 2 && cat.lapTimes.size() >= 2) {
+    EXPECT_EQ(cat.lapTimes[0], lin.lapTimes[0]);
+    EXPECT_EQ(cat.lapTimes[1], lin.lapTimes[1]);
+  }
 }
 
 int main() {
@@ -88,7 +94,7 @@ int main() {
   RUN_TEST(catmull_completes_two_laps);
   RUN_TEST(catmull_lap1_matches_golden);
   RUN_TEST(catmull_lap2_matches_golden);
-  RUN_TEST(catmull_lap2_close_to_mylaps);
+  RUN_TEST(catmull_lap_times_match_linear);
 
   TEST_SUMMARY();
 }

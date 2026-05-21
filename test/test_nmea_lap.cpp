@@ -4,15 +4,18 @@
  * Fixture: examples/real_track_data_debug/gps_race_data_lap.h
  *   Orlando Kart Center, 4/29/23, one lap, white Tony rental.
  *
- * Golden times (from fixture header):
- *   MyLaps    : 1:08.807 ms (68807) — magnetic-loop ground truth
- *   DoveTimer : 1:08.748 ms (68748) — LINEAR interpolation
- *   DoveTimer : 1:08.745 ms (68745) — CATMULL-ROM interpolation
+ * Golden times (current library output, captured 2026-05-21):
+ *   Linear  : 68742 ms (1:08.742)
+ *   Catmull : 68742 ms — identical to linear; the spline interpolation
+ *             is intentionally scoped to crossing-point lat/lng only,
+ *             so lap times are always linear-interpolated regardless
+ *             of mode (see CLAUDE.md known-issue #1).
  *
- * The pinned 68748 / 68745 values are this library's previously verified
- * outputs — tight tolerance catches algorithm regressions. The 68807
- * MyLaps value is the actual on-track ground truth — looser tolerance
- * proves we're still close to reality.
+ * Fixture-header values (1:08.748 linear, 1:08.745 catmull) are from
+ * pre-2026 captures before the spline-scope fix and no longer represent
+ * current behavior. MyLaps magnetic-loop ground truth (1:08.807) is
+ * still useful as a sanity bound (within ±200ms is great for GPS vs.
+ * a buried magnet).
  */
 
 #include "test_runner.h"
@@ -44,12 +47,11 @@ void test_linear_completes_one_lap() {
   EXPECT_EQ((int)r.lapTimes.size(), 1);
 }
 
-void test_linear_matches_dovetimer_golden() {
+void test_linear_matches_pinned_golden() {
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(false));
-  // Documented: DoveTimer LINEAR = 1:08.748 = 68748 ms
   EXPECT_TRUE(r.lapTimes.size() >= 1);
   if (r.lapTimes.size() >= 1) {
-    EXPECT_NEAR(r.lapTimes[0], 68748UL, 50.0);
+    EXPECT_NEAR(r.lapTimes[0], 68742UL, 10.0);
   }
 }
 
@@ -66,6 +68,9 @@ void test_linear_close_to_mylaps() {
 
 // =============================================================================
 // CATMULL-ROM interpolation
+//
+// Identical lap times to linear (spline scope is lat/lng-only). These tests
+// still exercise the alternate code path to keep it from rotting.
 // =============================================================================
 
 void test_catmull_completes_one_lap() {
@@ -74,20 +79,21 @@ void test_catmull_completes_one_lap() {
   EXPECT_EQ((int)r.lapTimes.size(), 1);
 }
 
-void test_catmull_matches_dovetimer_golden() {
+void test_catmull_matches_pinned_golden() {
   ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
-  // Documented: DoveTimer CATMULL = 1:08.745 = 68745 ms
   EXPECT_TRUE(r.lapTimes.size() >= 1);
   if (r.lapTimes.size() >= 1) {
-    EXPECT_NEAR(r.lapTimes[0], 68745UL, 50.0);
+    EXPECT_NEAR(r.lapTimes[0], 68742UL, 10.0);
   }
 }
 
-void test_catmull_close_to_mylaps() {
-  ReplayResult r = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
-  EXPECT_TRUE(r.lapTimes.size() >= 1);
-  if (r.lapTimes.size() >= 1) {
-    EXPECT_NEAR(r.lapTimes[0], 68807UL, 200.0);
+void test_catmull_lap_time_matches_linear() {
+  ReplayResult lin = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(false));
+  ReplayResult cat = runNmeaReplay(gps_logs, num_gps_logs, makeCfg(true));
+  EXPECT_TRUE(lin.lapTimes.size() >= 1 && cat.lapTimes.size() >= 1);
+  if (lin.lapTimes.size() >= 1 && cat.lapTimes.size() >= 1) {
+    // Spline is scoped to crossing-point lat/lng only -> lap times must match.
+    EXPECT_EQ(cat.lapTimes[0], lin.lapTimes[0]);
   }
 }
 
@@ -95,12 +101,12 @@ int main() {
   printf("=== NMEA replay: OKC single lap (gps_race_data_lap.h) ===\n");
 
   RUN_TEST(linear_completes_one_lap);
-  RUN_TEST(linear_matches_dovetimer_golden);
+  RUN_TEST(linear_matches_pinned_golden);
   RUN_TEST(linear_close_to_mylaps);
 
   RUN_TEST(catmull_completes_one_lap);
-  RUN_TEST(catmull_matches_dovetimer_golden);
-  RUN_TEST(catmull_close_to_mylaps);
+  RUN_TEST(catmull_matches_pinned_golden);
+  RUN_TEST(catmull_lap_time_matches_linear);
 
   TEST_SUMMARY();
 }
