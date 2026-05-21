@@ -275,7 +275,15 @@ struct TrackConfig {
 
 ## Known Issues & TODOs (from code comments)
 
-1. ~~**Catmull-Rom interpolation bug**~~: Fixed - spline now only used for lat/lng (not time/odometer), and previous GPS fix inserted as pre-crossing control point
+1. ~~**Catmull-Rom interpolation bug**~~: Fixed - spline is now used **only for the
+   reported crossing point's lat/lng**. Time and odometer are always interpolated
+   linearly to avoid spline overshoot producing wrong lap times. Practical consequence:
+   `forceCatmullRomInterpolation()` does NOT change lap-time output vs. linear — it
+   only affects `crossingLat`/`crossingLng` (which the public API doesn't currently
+   expose). The mode setting is preserved for future API additions and for users who
+   inspect interpolated coords via debug logs; layer-3 replay tests assert
+   `catmull_lap_times == linear_lap_times` on all four real-track fixtures to keep
+   this contract enforced.
 2. **Altitude messing up distance**: `loop()` has a TODO: "I think alt is messing up, investigate more... maybe flag?"
 3. ~~**Early abort bug**~~: Abandoned — commented-out `crossingStartedLineSide` tracking plus the `CROSSING_LINE_SIDE_NONE` define have been removed; the underlying "abort early" optimization was never implemented and the current hypotenuse-threshold flow is reliable in practice.
 4. **`checkStartFinish` portability**: TODO at the top of `checkStartFinish` to make more portable for split timing

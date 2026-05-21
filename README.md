@@ -11,7 +11,7 @@ Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.co
 
 Library for Arduino for creating damned accurate lap-timings using GPS data, on par with other commercial solutions.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
-Once past the threshold, using the 4 points closest to the line, creates a catmullrom spline to interpolate the exact crossing time.
+Once past the threshold, the 4 points closest to the line are used to interpolate the exact crossing — see [Interpolation modes](#interpolation-modes) below for the linear vs. Catmull-Rom trade-off.
 
 ## What's New in v4.0
 
@@ -104,6 +104,19 @@ CourseManager (orchestrator - optional, use for multi-course tracks)
 
 You can still use `DovesLapTimer` standalone if you only have one course and know your crossing lines up front. `CourseManager` is for when you want automatic course detection and multi-course support.
 
+## Interpolation modes
+
+When the driver exits the crossing zone, the library has a buffer of GPS fixes
+straddling the line and needs to compute the exact crossing time + position.
+Two modes are available:
+
+| | Affects lap time? | Affects crossing-point coords? | When to use |
+|---|---|---|---|
+| `forceLinearInterpolation()` *(default)* | yes — linear blend by distance + speed | yes — straight-line blend | Always works. The right default for kart timing — sub-10ms regression-tested against real fixtures. |
+| `forceCatmullRomInterpolation()` | **no** — falls back to linear for time/odometer | yes — smooth spline if 4 control points available, else linear | Useful only if you care about the reported crossing lat/lng coords (e.g. plotting where on the line you crossed). Lap-time output is identical to linear. |
+
+**Important context**: Catmull-Rom used to interpolate everything including time, but spline overshoot occasionally produced wrong lap times. The fix limited the spline to lat/lng of the crossing point — time and odometer are always linear. So switching modes has no effect on `getLastLapTime()` / `getBestLapTime()` / sector times. If you only care about timing, leave the default alone.
+
 ## API
 
 ### Option 1: DovesLapTimer (standalone, single course)
@@ -136,10 +149,10 @@ The code should have clarifying comments wherever there are any unclear bits.
   lapTimer.setSector2Line(sector2PointALat, sector2PointALng, sector2PointBLat, sector2PointBLng);
   lapTimer.setSector3Line(sector3PointALat, sector3PointALng, sector3PointBLat, sector3PointBLng);
 
-  // default interpolation method
-  lapTimer.forceCatmullRomInterpolation();
-  // Might be more accurate if your finishline is on a location you expect constant speed
-  lapTimer.forceLinearInterpolation();
+  // Linear is the default — call one of these only if you want to switch.
+  // See "Interpolation modes" below for what each one actually changes.
+  lapTimer.forceLinearInterpolation();      // default
+  lapTimer.forceCatmullRomInterpolation();  // smoother crossing-point coords; lap time unchanged
   // reset all counters back to zero
   lapTimer.reset();
 
