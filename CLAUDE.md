@@ -309,7 +309,7 @@ GitHub Actions workflows live in `.github/workflows/`:
   - `arduino:avr:uno` — `sector_timing_example` only (smoke test on small AVR; the other two
     require `Serial1` which the Uno lacks)
   - `esp32:esp32:esp32` — all 3 examples (custom platform URL pulls the ESP32 BSP)
-  - `Seeeduino:nrf52:xiaonRF52840` — all 3 examples (recommended hardware; uses the
+  - `Seeeduino:nrf52:xiaonRF52840Sense` — all 3 examples (recommended hardware; uses the
     Adafruit-based nrf52 core, not the older mbed core, since that's what real XIAO
     users compile against and it matches the FPU/double-precision pitch in the README)
   - Pulled libs: ArxTypeTraits, Adafruit GPS Library, Adafruit GFX, Adafruit SSD1306,

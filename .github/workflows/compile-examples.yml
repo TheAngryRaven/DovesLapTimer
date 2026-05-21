@@ -50,7 +50,7 @@ jobs:
           # uses the Adafruit-based nrf52 core (what most XIAO users actually run,
           # and what matches the FPU/double-precision pitch in the README)
           - alias: xiao-nrf52840
-            fqbn: Seeeduino:nrf52:xiaonRF52840
+            fqbn: Seeeduino:nrf52:xiaonRF52840Sense
             platforms: |
               - name: Seeeduino:nrf52
                 source-url: https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
