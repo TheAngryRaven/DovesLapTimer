@@ -6,6 +6,8 @@ DovesLapTimer. Compiles and runs on Linux / macOS with `g++` or `clang++`
 
 ## What's covered
 
+### Layer 2 — module unit tests
+
 | Suite | Module(s) | Tests |
 |---|---|---|
 | `test_geomath` | `GeoMath.h` | haversine + haversine3D sanity, real distances |
@@ -13,9 +15,34 @@ DovesLapTimer. Compiles and runs on Linux / macOS with `g++` or `clang++`
 | `test_course_detector` | `CourseDetector.h/cpp` | full state machine + rejection cooldown (CLAUDE.md issue #13) |
 | `test_synthetic_track` | full `DovesLapTimer` pipeline | drives a deterministic 100m × 100m CCW square loop, asserts lap / sector times + cross-lap consistency + direction resolution |
 
-The synthetic-track suite is an integration test — if the crossing
-detection or interpolation regresses, lap-to-lap variance > 5ms or
-absolute timing drift > 100ms will fail the run.
+### Layer 3 — NMEA replay regression
+
+Replays real GPS recordings from `examples/real_track_data_debug/` through the
+lap timer and asserts the output matches the per-lap golden values pinned in
+each fixture header (DoveTimer LINEAR / CATMULL, plus MyLaps where recorded).
+
+| Suite | Fixture | What it covers |
+|---|---|---|
+| `test_nmea_lap` | `gps_race_data_lap.h` | OKC, 1 lap, rental kart. Linear + Catmull-Rom, both vs. MyLaps. |
+| `test_nmea_2laps` | `gps_race_data_2laps.h` | OKC, 2 laps, rental kart. Linear + Catmull-Rom. |
+| `test_nmea_long_lap` | `gps_race_data_long_lap.h` | OKC pro track, 1 lap. Linear + Catmull-Rom. |
+| `test_nmea_praga` | `gps_race_data_praga_laps.h` | OKC, 2 laps, Praga Dark. Linear only (no Catmull baseline). |
+
+Pinned tolerance is 50 ms against the documented DoveTimer golden times — tight
+enough to catch any interpolation regression. Where MyLaps magnetic-loop times
+are available, a looser 200 ms tolerance proves we stay close to real-world
+ground truth.
+
+If you intentionally improve the algorithm and the pinned values shift,
+update the goldens in the fixture headers AND the matching `EXPECT_NEAR`
+calls in the test file.
+
+The replay parser (`replay_runner.h`) handles `$GPGGA` and `$GPRMC`
+sentences — enough for these fixtures — without depending on Adafruit_GPS.
+
+The synthetic-track suite (layer 2) is an integration test for clean
+deterministic input; the NMEA-replay suites (layer 3) are regression
+tests against captured real-world noise.
 
 ## Running locally
 
