@@ -1,14 +1,23 @@
 /**
  * Sector Timing Example for DovesLapTimer
  *
- * This example demonstrates the sector split timing feature.
- * Configure your start/finish line and two sector lines to get
- * sector times and calculate an optimal lap time.
+ * This example demonstrates 3-sector split timing using a SYNTHETIC GPS
+ * track — no GPS hardware required. The library is driven through three
+ * simulated laps around a 100m × 100m square loop so you can see sector
+ * times, best times, and optimal-lap calculation light up on Serial.
  *
  * Sector layout:
- * - Sector 1: Start/Finish → Sector 2 line
- * - Sector 2: Sector 2 line → Sector 3 line
- * - Sector 3: Sector 3 line → Start/Finish
+ * - Sector 1: Start/Finish -> Sector 2 line
+ * - Sector 2: Sector 2 line -> Sector 3 line
+ * - Sector 3: Sector 3 line -> Start/Finish
+ *
+ * To adapt for a real track:
+ *   1. Replace the four pairs of crossing-line coordinates below with
+ *      your own (Google Maps right-click -> copy lat,lng).
+ *   2. Delete generateSyntheticFix() and the LAPS_TO_RUN stop condition.
+ *   3. In loop(), replace the synthetic GPS block with reads from your
+ *      GPS module: feed lat, lng, altitude (m), and speed (knots) into
+ *      lapTimer.loop(), and ms-since-midnight into lapTimer.updateCurrentTime().
  */
 
 #include <DovesLapTimer.h>
@@ -21,32 +30,85 @@
   #include <Adafruit_TinyUSB.h>
 #endif
 
-// Configure your start/finish line coordinates
-// Use Google Maps: right-click → copy coordinates
-const double startFinishPointALat = 28.41270817056385;
-const double startFinishPointALng = -81.37973266418031;
-const double startFinishPointBLat = 28.41273038679321;
-const double startFinishPointBLng = -81.37957048753776;
+// =========================================================================
+// Synthetic track configuration
+// =========================================================================
+//
+// 100m × 100m square loop traced counter-clockwise from the SW corner.
+// Driver heading on each side: south -> east, east -> north, north -> west,
+// west -> south. Each lap crosses S/F, S2, S3, then S/F again to close.
+//
+//   NW ─────── S3 line ─────── NE
+//    │                          │
+//    │                          S
+//    W       (counter-          2
+//    │        clockwise)        │
+//    │                          │
+//   SW ─────── S/F line ─────── SE
 
-// Configure sector 2 line coordinates
-// This should be roughly 1/3 of the way around the track
-const double sector2PointALat = 28.41300000000000;  // CHANGE THESE
-const double sector2PointALng = -81.38000000000000;  // TO YOUR
-const double sector2PointBLat = 28.41302000000000;  // TRACK
-const double sector2PointBLng = -81.37998000000000;  // COORDINATES
+const double TRACK_SOUTH_LAT = 28.41265;
+const double TRACK_NORTH_LAT = 28.41355;
+const double TRACK_WEST_LNG  = -81.37970;
+const double TRACK_EAST_LNG  = -81.37870;
 
-// Configure sector 3 line coordinates
-// This should be roughly 2/3 of the way around the track
-const double sector3PointALat = 28.41280000000000;  // CHANGE THESE
-const double sector3PointALng = -81.37900000000000;  // TO YOUR
-const double sector3PointBLat = 28.41282000000000;  // TRACK
-const double sector3PointBLng = -81.37898000000000;  // COORDINATES
+const unsigned int  STEPS_PER_LAP   = 80;
+const unsigned long SIM_MS_PER_STEP = 200;     // sim-time GPS @ 5Hz
+const float         SIM_SPEED_KNOTS = 48.0f;   // ~90 km/h
+const float         SIM_ALT_METERS  = 50.0f;
+const unsigned int  LAPS_TO_RUN     = 3;
 
-// Crossing threshold in meters
-double crossingThresholdMeters = 7.0;
+// Crossing lines positioned so a CCW driver hits S/F -> S2 -> S3 -> S/F.
 
-// Create lap timer instance
+// Start/finish: south side, perpendicular to east-bound travel
+const double startFinishPointALat = 28.41255;
+const double startFinishPointALng = -81.37920;
+const double startFinishPointBLat = 28.41275;
+const double startFinishPointBLng = -81.37920;
+
+// Sector 2: east side, perpendicular to north-bound travel
+const double sector2PointALat = 28.41310;
+const double sector2PointALng = -81.37860;
+const double sector2PointBLat = 28.41310;
+const double sector2PointBLng = -81.37880;
+
+// Sector 3: north side, perpendicular to west-bound travel
+const double sector3PointALat = 28.41345;
+const double sector3PointALng = -81.37925;
+const double sector3PointBLat = 28.41365;
+const double sector3PointBLng = -81.37925;
+
+// =========================================================================
+// Lap timer + simulation state
+// =========================================================================
+
+const double crossingThresholdMeters = 7.0;
 DovesLapTimer lapTimer(crossingThresholdMeters, &Serial);
+
+unsigned long stepCount = 0;
+unsigned long simTimeMs = 3600000UL;  // start sim clock at 01:00 AM
+
+// Compute (lat, lng) at a given step along the synthetic CCW loop.
+void generateSyntheticFix(unsigned long step, double &lat, double &lng) {
+  const unsigned int sideSteps = STEPS_PER_LAP / 4;
+  const unsigned int phase = step % STEPS_PER_LAP;
+  const double t = (phase % sideSteps) / (double)sideSteps;
+
+  if (phase < sideSteps) {                  // south side, east-bound
+    lat = TRACK_SOUTH_LAT;
+    lng = TRACK_WEST_LNG + t * (TRACK_EAST_LNG - TRACK_WEST_LNG);
+  } else if (phase < 2 * sideSteps) {       // east side, north-bound
+    lat = TRACK_SOUTH_LAT + t * (TRACK_NORTH_LAT - TRACK_SOUTH_LAT);
+    lng = TRACK_EAST_LNG;
+  } else if (phase < 3 * sideSteps) {       // north side, west-bound
+    lat = TRACK_NORTH_LAT;
+    lng = TRACK_EAST_LNG + t * (TRACK_WEST_LNG - TRACK_EAST_LNG);
+  } else {                                   // west side, south-bound
+    lat = TRACK_NORTH_LAT + t * (TRACK_SOUTH_LAT - TRACK_NORTH_LAT);
+    lng = TRACK_WEST_LNG;
+  }
+}
+
+void displaySectorInfo();
 
 void setup() {
   Serial.begin(115200);
@@ -54,42 +116,52 @@ void setup() {
 
   Serial.println("DovesLapTimer - Sector Timing Example");
   Serial.println("======================================");
+  Serial.println("Driving a synthetic CCW square track. No GPS hardware needed.");
+  Serial.println();
 
-  // Configure start/finish line
   lapTimer.setStartFinishLine(startFinishPointALat, startFinishPointALng,
-                               startFinishPointBLat, startFinishPointBLng);
-
-  // Configure sector lines
+                              startFinishPointBLat, startFinishPointBLng);
   lapTimer.setSector2Line(sector2PointALat, sector2PointALng,
                           sector2PointBLat, sector2PointBLng);
   lapTimer.setSector3Line(sector3PointALat, sector3PointALng,
                           sector3PointBLat, sector3PointBLng);
 
-  Serial.println("Sector lines configured!");
-  Serial.println("Waiting for GPS data...");
+  Serial.println("Sector lines configured. Driving...");
   Serial.println();
 }
 
 void loop() {
-  // In a real application, you would:
-  // 1. Read GPS data from your GPS module
-  // 2. Update the lap timer with GPS coordinates
-  // 3. Display sector times and optimal lap
+  // --- In a real application: replace this block with reads from your GPS ---
+  double lat, lng;
+  generateSyntheticFix(stepCount, lat, lng);
+  lapTimer.updateCurrentTime(simTimeMs);
+  lapTimer.loop(lat, lng, SIM_ALT_METERS, SIM_SPEED_KNOTS);
+  stepCount++;
+  simTimeMs += SIM_MS_PER_STEP;
+  // --------------------------------------------------------------------------
 
-  // Example GPS update (you would replace this with real GPS data):
-  // double currentLat = gps.latitude;
-  // double currentLng = gps.longitude;
-  // float currentAlt = gps.altitude;
-  // float currentSpeed = gps.speed;
-  // unsigned long gpsTime = getGpsTimeInMilliseconds();
+  // Print only when lap or sector changes — keeps Serial output readable.
+  static int lastLap = -1;
+  static int lastSector = -1;
+  const int curLap = (int)lapTimer.getLaps();
+  const int curSector = lapTimer.getCurrentSector();
+  if (curLap != lastLap || curSector != lastSector) {
+    displaySectorInfo();
+    lastLap = curLap;
+    lastSector = curSector;
+  }
 
-  // lapTimer.updateCurrentTime(gpsTime);
-  // lapTimer.loop(currentLat, currentLng, currentAlt, currentSpeed);
+  // Stop once the demo has produced enough data so output doesn't loop forever.
+  if (curLap >= (int)LAPS_TO_RUN) {
+    Serial.println();
+    Serial.println("=== Demo complete ===");
+    displaySectorInfo();
+    while (true) {
+      delay(1000);
+    }
+  }
 
-  // Display sector timing information
-  displaySectorInfo();
-
-  delay(1000);
+  delay(50);  // real-time pacing
 }
 
 void displaySectorInfo() {
