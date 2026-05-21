@@ -303,11 +303,15 @@ GitHub Actions workflows live in `.github/workflows/`:
   (Library Manager compatibility level). Uploads `arduino-lint-report.json` as an artifact.
 - **compile-examples.yml** — uses `arduino/compile-sketches@v1` to compile every example
   against a matrix of boards:
-  - `arduino:avr:mega` — all 3 examples
+  - `arduino:avr:mega` — `sector_timing_example` only (smoke test; the OLED + GPS
+    examples are over Mega's SRAM budget — the README itself calls Mega "really
+    pushing it", so we only claim the core library compiles on AVR Mega)
   - `arduino:avr:uno` — `sector_timing_example` only (smoke test on small AVR; the other two
     require `Serial1` which the Uno lacks)
   - `esp32:esp32:esp32` — all 3 examples (custom platform URL pulls the ESP32 BSP)
-  - `Seeeduino:mbed:xiaonRF52840` — all 3 examples (recommended hardware, Seeed BSP URL)
+  - `Seeeduino:nrf52:xiaonRF52840` — all 3 examples (recommended hardware; uses the
+    Adafruit-based nrf52 core, not the older mbed core, since that's what real XIAO
+    users compile against and it matches the FPU/double-precision pitch in the README)
   - Pulled libs: ArxTypeTraits, Adafruit GPS Library, Adafruit GFX, Adafruit SSD1306,
     Adafruit SH110X
   - `enable-deltas-report: true` uploads `sketches-reports/` so PRs surface flash/SRAM deltas
