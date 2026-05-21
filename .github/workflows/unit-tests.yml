@@ -1,0 +1,21 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  host-tests:
+    name: Host-native unit tests (g++)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show compiler version
+        run: g++ --version
+
+      - name: Build and run tests
+        working-directory: test
+        run: make run

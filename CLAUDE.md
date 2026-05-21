@@ -319,12 +319,27 @@ GitHub Actions workflows live in `.github/workflows/`:
     cell — the BSP's link recipe shells out to it even at compile-only time
   - `enable-deltas-report: true` uploads `sketches-reports/` so PRs surface flash/SRAM deltas
 
-Both workflows trigger on push to `main`/`master`, on any PR, and manually via
-`workflow_dispatch`. Status badges are linked at the top of README.md.
+- **unit-tests.yml** — builds and runs the host-native test suite in `test/`
+  on ubuntu-latest with `g++`. No board matrix; the suite is pure C++ and
+  doesn't depend on any Arduino toolchain. Fails the run on any failed assert.
 
-This is a **layer 1** CI setup — structural validation only (lint + compile). Future work:
-layer 2 (native unit tests for pure-math modules like `GeoMath`, `DirectionDetector`,
-`CourseDetector`) and layer 3 (NMEA replay regression tests against golden lap times).
+All three workflows trigger on push to `main`/`master`, on any PR, and
+manually via `workflow_dispatch`. Status badges are linked at the top of
+README.md.
+
+### Test layers
+
+- **Layer 1 — structural** (`arduino-lint.yml`, `compile-examples.yml`):
+  lint pass + every example compiles across the board matrix. Catches
+  missing includes, broken API signatures, fatal SRAM/flash overruns.
+- **Layer 2 — host unit tests** (`unit-tests.yml`): runs `test/` on the
+  host via `make run`. Covers `GeoMath`, `DirectionDetector`,
+  `CourseDetector` state machine, and a synthetic-track integration
+  pass over the full `DovesLapTimer` pipeline. Catches algorithm
+  regressions that compile fine but produce wrong numbers. See
+  `test/README.md` for layout and how to add a suite.
+- **Layer 3 — replay regression (future)**: feed real NMEA fixtures
+  through the lap timer and assert against MyLaps-confirmed golden times.
 
 ## Cross-Reference: Related Repos
 
