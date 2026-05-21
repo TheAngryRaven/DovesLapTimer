@@ -338,7 +338,17 @@ GitHub Actions workflows live in `.github/workflows/`:
   on ubuntu-latest with `g++`. No board matrix; the suite is pure C++ and
   doesn't depend on any Arduino toolchain. Fails the run on any failed assert.
 
-All three workflows trigger on push to `main`/`master`, on any PR, and
+- **docs.yml** — builds Doxygen HTML from `src/` + `examples/` + `README.md` +
+  `HELPME.md` using the doxygen-awesome-css theme vendored under `docs/`.
+  On push to master, deploys the output (`docs-build/html/`) to the
+  `gh-pages` branch via `peaceiris/actions-gh-pages@v3` with
+  `force_orphan: true` (keeps the gh-pages branch lean — overwrites
+  rather than accumulating history). On PR, builds-only without
+  deploying so we catch a broken Doxyfile before merge. Live site:
+  https://theangryraven.github.io/DovesLapTimer/ (GitHub repo Settings →
+  Pages must be set to source = gh-pages branch, folder = /).
+
+All four workflows trigger on push to `main`/`master`, on any PR, and
 manually via `workflow_dispatch`. Status badges are linked at the top of
 README.md.
 

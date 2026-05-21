@@ -1,0 +1,85 @@
+# Doxygen configuration for DovesLapTimer
+# ----------------------------------------
+# Documents the public C++ API in src/ plus all example sketches in
+# examples/, with README.md as the front page. Styled with
+# doxygen-awesome-css (modern, dark-mode-capable) vendored under docs/.
+#
+# Generated HTML lands in docs-build/html/ which is deployed to the
+# gh-pages branch by .github/workflows/docs.yml. Don't commit docs-build/.
+
+# ----- Project metadata -----
+PROJECT_NAME           = "DovesLapTimer"
+PROJECT_NUMBER         = "4.0.0"
+PROJECT_BRIEF          = "GPS-based lap timing Arduino library — go-karts to race cars"
+OUTPUT_DIRECTORY       = docs-build
+OUTPUT_LANGUAGE        = English
+
+# ----- Inputs -----
+INPUT                  = src \
+                         examples \
+                         README.md \
+                         HELPME.md
+USE_MDFILE_AS_MAINPAGE = README.md
+RECURSIVE              = YES
+FILE_PATTERNS          = *.cpp *.h *.hpp *.ino *.md
+EXTENSION_MAPPING      = ino=C++
+EXCLUDE_PATTERNS       = */build/* */docs-build/*
+
+# ----- Extraction -----
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+INTERNAL_DOCS          = NO
+SHOW_INCLUDE_FILES     = YES
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = YES
+
+# Macros that confuse the parser without expansion
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = F(x)=x \
+                         PROGMEM=
+
+# ----- Output formats -----
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+
+# ----- doxygen-awesome-css theme -----
+HTML_HEADER            = docs/header.html
+HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome.css \
+                         docs/doxygen-awesome-sidebar-only.css \
+                         docs/doxygen-awesome-sidebar-only-darkmode-toggle.css
+HTML_EXTRA_FILES       = docs/doxygen-awesome-darkmode-toggle.js \
+                         docs/doxygen-awesome-fragment-copy-button.js \
+                         docs/doxygen-awesome-paragraph-link.js \
+                         docs/doxygen-awesome-interactive-toc.js \
+                         docs/doxygen-awesome-tabs.js
+HTML_COLORSTYLE        = LIGHT
+HTML_DYNAMIC_SECTIONS  = YES
+
+# ----- Diagrams (require graphviz; CI installs it) -----
+HAVE_DOT               = YES
+COLLABORATION_GRAPH    = YES
+CLASS_GRAPH            = YES
+UML_LOOK               = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+
+# ----- Search -----
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+# ----- Warnings -----
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARN_AS_ERROR          = NO
