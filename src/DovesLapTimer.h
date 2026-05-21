@@ -96,7 +96,7 @@ public:
    * @param currentLat Latitude of the current position in decimal degrees.
    * @param currentLng Longitude of the current position in decimal degrees.
    * @param currentAltitudeMeters Altitude of the current position in meters.
-   * @param currentSpeed The current speed in knots
+   * @param currentSpeedKnots The current speed in knots
    */
   int loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots);
 
@@ -191,7 +191,7 @@ public:
    * @param prevLng Longitude of the first GPS point in decimal degrees.
    * @param prevAlt Altitude of the first GPS point in meters.
    * @param currentLat Latitude of the second GPS point in decimal degrees.
-   * @param curentLng Longitude of the second GPS point in decimal degrees.
+   * @param currentLng Longitude of the second GPS point in decimal degrees.
    * @param currentAlt Altitude of the second GPS point in meters.
    * @return The 3D distance between the two GPS points in meters.
    */
