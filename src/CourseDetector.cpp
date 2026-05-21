@@ -109,9 +109,14 @@ void CourseDetector::acceptCandidate(int index) {
   _state = DETECT_STATE_DETECTED;
 }
 
-void CourseDetector::rejectAllCandidates() {
+void CourseDetector::rejectAllCandidates(float currentOdometer) {
   _rankedMatchCount = 0;
   _state = DETECT_STATE_WAYPOINT_SET;
+  // Advance the lap-window origin to "now". Without this, the driver is
+  // still inside the waypoint proximity and still meets the min-distance
+  // gate, so the very next GPS fix would re-rank the same candidates and
+  // we'd burn through MAX_REJECTIONS in a handful of frames.
+  _waypointOdometer = currentOdometer;
 }
 
 void CourseDetector::setSpeedThresholdMph(float mph) {

@@ -98,8 +98,14 @@ CourseManager (orchestrator)
 
 ### Direction Detection (v4.0)
 - `DirectionDetector` struct inline in `DovesLapTimer.h`
-- After start/finish crossed (`raceSeen = true`), first sector line determines direction
-- S2 first = forward (`DIR_FORWARD`), S3 first = reverse (`DIR_REVERSE`)
+- After start/finish crossed (`raceSeen = true`), captures **physical** S2 and S3
+  crossing timestamps in a per-lap window (`lapS2CrossingTime`, `lapS3CrossingTime`)
+- At the next start/finish, if BOTH timestamps were captured this lap, direction
+  resolves: `s2 < s3` → `DIR_FORWARD`, otherwise `DIR_REVERSE`
+- Single-sector laps (driver missed a poorly-placed line or GPS rate too low to
+  catch the zone) are discarded — the window resets and we re-try next lap
+- Latest in-lap crossing wins: a phantom GPS glitch early in the lap gets
+  overwritten by the real crossing that follows
 - Once resolved, direction is locked. `handleLineCrossing()` remaps S2↔S3 when reverse
 - Getters: `getDirection()`, `isDirectionResolved()`
 
@@ -108,6 +114,11 @@ CourseManager (orchestrator)
 - Drops waypoint when speed >= 20 mph, waits for return within 10m after 200m+ traveled
 - Compares driven distance (feet) to each course's `lengthFt` within 25% tolerance
 - Builds ranked candidates, CourseManager validates via `raceStarted` sanity check
+- `rejectAllCandidates(currentOdometer)` advances `_waypointOdometer` to "now"
+  so a rejection requires another full lap before re-ranking — otherwise the
+  driver is still inside the proximity zone and the next GPS fix would
+  re-trigger ranking, burning through `COURSE_DETECT_MAX_REJECTIONS` in a few
+  frames and jumping straight to Lap Anything
 
 ### WaypointLapTimer ("Lap Anything") (v4.0)
 - Fallback when no course is detected (after 3 rejections)
@@ -267,6 +278,9 @@ struct TrackConfig {
 8. ~~**No .gitignore**~~: Added
 9. **nRF52840 RAM budget unaffected by AVR macros**: `DovesLapTimer.h` buffer-size `#if` now uses `defined(RAMEND) && defined(RAMSTART)` as the AVR detection gate; non-AVR targets get the 100-entry buffer unconditionally.
 10. **Haversine hot-path micro-opt (2026-04-17)**: `pow(x, 2)` replaced with `x*x` in `GeoMath.h::geoHaversine` and `DovesLapTimer.cpp::pointLineSegmentDistance` for consistency with the existing `sq()` usage elsewhere — same output, fewer library calls.
+11. ~~**Direction detector mis-classified forward as reverse**~~: Fixed (2026-05-20). `DirectionDetector::onLineCrossing` used to lock direction from whichever single sector line (S2 or S3) was hit first after `raceSeen`. A poorly-placed sector line that the racing line missed (or low GPS sample rate that skipped the zone) caused S3 to be hit "first", flipping direction to reverse forever. Now requires BOTH physical S2 and S3 to be crossed within a lap window and decides from their temporal order at the next start/finish. Same root cause as the ported webapp bug `courseDetection.ts:67-90`.
+12. ~~**Direction lockout on glitched first crossing**~~: Fixed (2026-05-20). Same change as #11. The old "first crossing wins" rule meant a single GPS teleport that triggered a phantom S3 crossing locked direction to reverse permanently. The new logic requires both sector lines and lets the *latest* in-lap crossing overwrite earlier phantoms, dramatically shrinking the surface area for a single glitch to mis-lock. Same root cause as the ported webapp bug `lapCalculation.ts:107`. Note: a glitch that fabricates BOTH sector crossings on the same lap could still mis-lock — a multi-lap voting threshold would harden this further but was deferred.
+13. ~~**CourseManager burned through MAX_REJECTIONS in a few GPS frames**~~: Fixed (2026-05-20). When `_handleCandidatesReady` rejected all candidates, `rejectAllCandidates()` only reset state to `WAYPOINT_SET`; the driver was still inside waypoint proximity with `distanceSinceWaypoint` still well above the 200m gate, so the very next GPS fix re-triggered ranking → same candidates → reject → repeat. At 25 Hz this burned all 3 rejections in ~120 ms, falling straight to Lap Anything without the driver completing another real lap. Fix: `rejectAllCandidates(currentOdometer)` now advances `_waypointOdometer` to "now", so the next ranking pass requires another full lap (200m+ traveled and returned to proximity).
 
 ## Supported Hardware
 
