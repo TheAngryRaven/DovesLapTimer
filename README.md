@@ -13,11 +13,51 @@ Library for Arduino for creating damned accurate lap-timings using GPS data, on 
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, the 4 points closest to the line are used to interpolate the exact crossing — see [Interpolation modes](#interpolation-modes) below for the linear vs. Catmull-Rom trade-off.
 
+## Quickstart
+
+```cpp
+#include <DovesLapTimer.h>
+
+DovesLapTimer lapTimer(7.0);  // 7m crossing-line threshold
+
+void setup() {
+  Serial.begin(115200);
+  // Two GPS points defining your start/finish line:
+  lapTimer.setStartFinishLine(28.41270, -81.37973,
+                              28.41273, -81.37957);
+}
+
+void loop() {
+  // Feed it on every GPS fix:
+  lapTimer.updateCurrentTime(gpsTimeMsSinceMidnight);
+  lapTimer.loop(lat, lng, altMeters, speedKnots);
+
+  if (lapTimer.getLaps() > 0) {
+    Serial.print("Last lap (ms): ");
+    Serial.println(lapTimer.getLastLapTime());
+  }
+}
+```
+
+That's the minimum. Add sector lines via `setSector2Line()` / `setSector3Line()` for split times. For multi-course tracks with automatic course detection, use `CourseManager` instead — see the [API](#api) below.
+
+The library does **not** talk to GPS hardware directly. You feed it `(lat, lng, alt_m, speed_knots, time_ms_since_midnight)`, it returns lap timing. See [`examples/`](examples/) for full sketches wiring up `Adafruit_GPS` and an OLED.
+
+## Testing & validation
+
+Three layers of regression tests run on every push and PR (see [`test/README.md`](test/README.md) for the full layout):
+
+1. **Layer 1 — structural** (`arduino-lint` + `compile-examples`): every example compiles across AVR Mega, AVR Uno, ESP32, and XIAO nRF52840.
+2. **Layer 2 — module unit tests** (43 tests, host-native): `GeoMath`, `DirectionDetector`, `CourseDetector` state machine, plus a synthetic-track integration pass over the full lap-timer pipeline.
+3. **Layer 3 — NMEA replay regression** (23 tests, host-native): four real GPS recordings from Orlando Kart Center are replayed through the lap timer; lap times must match pinned goldens within ±10 ms, plus a ±200 ms sanity bound against MyLaps magnetic-loop ground truth where it's available.
+
+To run locally: `cd test && make run`.
+
 ## What's New in v4.0
 
 * **Automatic Course Detection** - Drive a lap at any track and the library figures out which course layout you're on by matching driven distance against known courses. No manual selection needed.
 * **Multi-Course Support** - Define up to 8 course layouts per track (different configurations, rental vs. pro layouts, etc). `CourseManager` orchestrates them all.
-* **Direction Detection** - Automatically detects if you're driving the course forward or reverse based on which sector line you cross first.
+* **Direction Detection** - Automatically detects whether you're driving the course forward or reverse from the temporal order of sector-line crossings within a lap window. Glitch-resistant — needs both physical sector lines crossed in a lap before resolving, so a single GPS teleport can't lock the wrong direction.
 * **"Lap Anything" Fallback** - If course detection fails after 3 attempts, falls back to `WaypointLapTimer` which drops a waypoint and uses proximity-based timing. Works on any track, anywhere - no pre-configured lines needed.
 * **Configurable Thresholds** - Speed, proximity, and detection thresholds are now adjustable at runtime via setter methods.
 
