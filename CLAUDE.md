@@ -338,8 +338,14 @@ README.md.
   pass over the full `DovesLapTimer` pipeline. Catches algorithm
   regressions that compile fine but produce wrong numbers. See
   `test/README.md` for layout and how to add a suite.
-- **Layer 3 — replay regression (future)**: feed real NMEA fixtures
-  through the lap timer and assert against MyLaps-confirmed golden times.
+- **Layer 3 — NMEA replay regression** (`unit-tests.yml`, same job): replays the
+  four `examples/real_track_data_debug/gps_race_data_*.h` fixtures through the
+  lap timer via `test/replay_runner.h` (minimal `$GPGGA` + `$GPRMC` parser, no
+  Adafruit_GPS dependency). Asserts the output matches the per-lap DoveTimer
+  golden values pinned in each fixture header to ±50ms, plus a ±200ms check
+  against MyLaps magnetic-loop times where recorded. Catches interpolation
+  regressions on real-world noisy GPS data, not just the clean synthetic track.
+  21 replay tests across 4 fixtures.
 
 ## Cross-Reference: Related Repos
 
