@@ -44,6 +44,13 @@ using TRITYPE = double;
 // Maximum courses supported
 #define MAX_COURSES  8
 
+// Outcome of a single _detectLineCrossing pass.
+enum LineDetectResult {
+  LINE_DETECT_NONE,         // not in / near the crossing zone
+  LINE_DETECT_IN_ZONE,      // inside the zone (entered this fix or continuing)
+  LINE_DETECT_COMPLETED,    // exited the zone this fix — interpolated outputs valid
+};
+
 
 struct crossingPointBufferEntry {
   double lat; // latitude
@@ -466,6 +473,29 @@ private:
    * @return True if near or crossing the line, false otherwise.
    */
   bool checkSectorLine(double currentLat, double currentLng, double pointALat, double pointALng, double pointBLat, double pointBLng, bool& crossingFlag, int sectorNumber);
+  /**
+   * @brief Shared crossing-zone state machine used by checkStartFinish and
+   * checkSectorLine. Detects entry, buffers GPS fixes inside the zone, and
+   * interpolates the exact crossing point on exit.
+   *
+   * @param currentLat / currentLng Current GPS position.
+   * @param pointALat / pointALng Line endpoint A.
+   * @param pointBLat / pointBLng Line endpoint B.
+   * @param crossingFlag Reference to the per-line in-zone flag.
+   * @param lineLabel Debug label: 0 = start/finish, 2 / 3 = sector.
+   * @param[out] outLat / outLng / outTime / outOdometer Interpolated crossing
+   *   point — only valid when the return value is LINE_DETECT_COMPLETED.
+   * @return LINE_DETECT_NONE / IN_ZONE / COMPLETED. See enum docs.
+   */
+  LineDetectResult _detectLineCrossing(
+      double currentLat, double currentLng,
+      double pointALat, double pointALng,
+      double pointBLat, double pointBLng,
+      bool& crossingFlag,
+      int lineLabel,
+      double& outLat, double& outLng,
+      unsigned long& outTime,
+      double& outOdometer);
   /**
    * @brief Handles the logic when a line is crossed, updating sector times.
    *

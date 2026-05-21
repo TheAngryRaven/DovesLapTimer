@@ -79,6 +79,13 @@ CourseManager (orchestrator)
 3. `loop()` updates odometer (haversine3D), speed, then checks all crossing lines
 4. `checkStartFinish()` and `checkSectorLine()` handle detection + interpolation
 
+Both call a shared private helper `_detectLineCrossing()` that runs the zone
+state machine, manages the GPS-fix buffer, and produces interpolated crossing
+output via out-params. Callers branch on the helper's `LineDetectResult`
+(NONE / IN_ZONE / COMPLETED) and do their own post-crossing accounting
+(`checkStartFinish` does lap timing, `checkSectorLine` just delegates to
+`handleLineCrossing`).
+
 ### Crossing Detection Algorithm (the hard part)
 - Uses **hypotenuse-based threshold** (not simple distance-to-line)
 - Calculates hypotenuse from `crossingLineWidth` and `crossingThresholdMeters`
