@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question / usage help
+    url: https://github.com/TheAngryRaven/DovesLapTimer/discussions
+    about: For "how do I..." questions, open a Discussion rather than an issue.
+  - name: API documentation
+    url: https://theangryraven.github.io/DovesLapTimer/
+    about: Generated reference for the full public API.

@@ -1,0 +1,70 @@
+name: Bug report
+description: Something isn't timing/detecting correctly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! The more concrete detail you give, the faster
+        it gets fixed. If it's a timing/detection issue, a sample of your GPS
+        data (NMEA log) is gold — see the `examples/real_track_data_debug/`
+        fixtures for the format we use to reproduce.
+
+  - type: input
+    id: version
+    attributes:
+      label: Library version
+      description: From the Arduino Library Manager, or the `version=` in library.properties.
+      placeholder: "4.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mcu
+    attributes:
+      label: MCU
+      options:
+        - XIAO nRF52840
+        - Arduino Mega
+        - Arduino Uno
+        - ESP32
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: gps
+    attributes:
+      label: GPS module + rate
+      placeholder: "Matek SAM-M10Q @ 25Hz"
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the library do? What did you expect instead?
+      placeholder: |
+        Expected: lap detected when crossing the start/finish line.
+        Actual: lap counter never increments / fires twice / wrong time.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sketch
+    attributes:
+      label: Minimal sketch / setup
+      description: How are you configuring the timer (lines, threshold, interpolation mode)?
+      render: cpp
+    validations:
+      required: false
+
+  - type: textarea
+    id: gps-data
+    attributes:
+      label: GPS data sample (if a timing/detection issue)
+      description: A short NMEA log or a list of (lat, lng, alt, speed, time) fixes around where it went wrong.
+      render: text
+    validations:
+      required: false
