@@ -13,6 +13,14 @@
 
 #include <DovesLapTimer.h>
 
+// Adafruit nRF52 BSP (e.g. Seeed XIAO nRF52840) routes Serial through USB CDC
+// via TinyUSB. The BSP defines USE_TINYUSB when that stack is selected; the
+// header below pulls in the TinyUSB implementation so Serial links.
+// No-op on AVR / ESP32 / mbed cores.
+#ifdef USE_TINYUSB
+  #include <Adafruit_TinyUSB.h>
+#endif
+
 // Configure your start/finish line coordinates
 // Use Google Maps: right-click → copy coordinates
 const double startFinishPointALat = 28.41270817056385;
