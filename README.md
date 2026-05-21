@@ -7,6 +7,7 @@ Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.co
 
 [![compile-examples](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml)
 [![arduino-lint](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/arduino-lint.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/arduino-lint.yml)
+[![unit-tests](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/unit-tests.yml)
 
 Library for Arduino for creating damned accurate lap-timings using GPS data, on par with other commercial solutions.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
