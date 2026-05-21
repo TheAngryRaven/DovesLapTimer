@@ -281,6 +281,30 @@ struct TrackConfig {
 Use the `real_track_data_debug` example to replay real NMEA data without GPS hardware.
 Track data from Orlando Kart Center is included. Compare results against MyLaps timing.
 
+## Continuous Integration
+
+GitHub Actions workflows live in `.github/workflows/`:
+
+- **arduino-lint.yml** — runs `arduino/arduino-lint-action@v2` at `compliance: specification`
+  (Library Manager compatibility level). Uploads `arduino-lint-report.json` as an artifact.
+- **compile-examples.yml** — uses `arduino/compile-sketches@v1` to compile every example
+  against a matrix of boards:
+  - `arduino:avr:mega` — all 3 examples
+  - `arduino:avr:uno` — `sector_timing_example` only (smoke test on small AVR; the other two
+    require `Serial1` which the Uno lacks)
+  - `esp32:esp32:esp32` — all 3 examples (custom platform URL pulls the ESP32 BSP)
+  - `Seeeduino:mbed:xiaonRF52840` — all 3 examples (recommended hardware, Seeed BSP URL)
+  - Pulled libs: ArxTypeTraits, Adafruit GPS Library, Adafruit GFX, Adafruit SSD1306,
+    Adafruit SH110X
+  - `enable-deltas-report: true` uploads `sketches-reports/` so PRs surface flash/SRAM deltas
+
+Both workflows trigger on push to `main`/`master`, on any PR, and manually via
+`workflow_dispatch`. Status badges are linked at the top of README.md.
+
+This is a **layer 1** CI setup — structural validation only (lint + compile). Future work:
+layer 2 (native unit tests for pure-math modules like `GeoMath`, `DirectionDetector`,
+`CourseDetector`) and layer 3 (NMEA replay regression tests against golden lap times).
+
 ## Cross-Reference: Related Repos
 
 - DovesLapTimer (this repo) - Core timing library

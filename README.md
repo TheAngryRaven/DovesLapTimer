@@ -4,6 +4,10 @@ Full datalogger + STL case files dropped over at [https://github.com/TheAngryRav
 Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer) (100% vibe code)
 
 # Doves GPS Lap Timer
+
+[![compile-examples](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml)
+[![arduino-lint](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/arduino-lint.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/arduino-lint.yml)
+
 Library for Arduino for creating damned accurate lap-timings using GPS data, on par with other commercial solutions.
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, using the 4 points closest to the line, creates a catmullrom spline to interpolate the exact crossing time.
