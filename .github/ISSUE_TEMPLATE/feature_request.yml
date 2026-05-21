@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a new capability or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep in mind DovesLapTimer deliberately does **not** talk to GPS
+        hardware — it takes coordinates + time and returns lap timing. Feature
+        requests for GPS/serial/display handling usually belong in an example
+        sketch rather than the core library.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: The use case behind the request, not just the proposed solution.
+      placeholder: "I want to know my elevation gain per lap for hill-climb events..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would the API or behavior look like?
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways you've thought about solving this, or workarounds you're using now.
+    validations:
+      required: false

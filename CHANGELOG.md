@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file. The
 format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Project governance docs: `CONTRIBUTING.md` (dev setup, the 3-layer testing
+  philosophy, PR workflow, release process), `SECURITY.md`, GitHub issue
+  forms (bug report + feature request) and a pull-request template.
+
 ## [4.1.0] – 2026-05-21
 
 A quality-and-confidence release. No breaking API changes; everything from
