@@ -1,0 +1,33 @@
+name: arduino-lint
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: arduino-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Arduino Lint
+        uses: arduino/arduino-lint-action@v2
+        with:
+          project-type: library
+          compliance: specification
+          library-manager: update
+          report-file: arduino-lint-report.json
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arduino-lint-report
+          path: arduino-lint-report.json
+          if-no-files-found: ignore

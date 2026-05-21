@@ -1,0 +1,85 @@
+name: compile-examples
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  compile:
+    name: ${{ matrix.board.alias }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          # Arduino Mega (AVR, has Serial1) — all examples
+          - alias: arduino-mega
+            fqbn: arduino:avr:mega
+            platforms: |
+              - name: arduino:avr
+            sketch-paths: |
+              - examples/basic_oled_example
+              - examples/sector_timing_example
+              - examples/real_track_data_debug
+
+          # Arduino Uno (AVR, no Serial1) — only the portable sketch
+          # smoke test that the core library still builds on a small AVR
+          - alias: arduino-uno
+            fqbn: arduino:avr:uno
+            platforms: |
+              - name: arduino:avr
+            sketch-paths: |
+              - examples/sector_timing_example
+
+          # ESP32 — all examples
+          - alias: esp32
+            fqbn: esp32:esp32:esp32
+            platforms: |
+              - name: esp32:esp32
+                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+            sketch-paths: |
+              - examples/basic_oled_example
+              - examples/sector_timing_example
+              - examples/real_track_data_debug
+
+          # Seeed XIAO nRF52840 (recommended hardware) — all examples
+          - alias: xiao-nrf52840
+            fqbn: Seeeduino:mbed:xiaonRF52840
+            platforms: |
+              - name: Seeeduino:mbed
+                source-url: https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
+            sketch-paths: |
+              - examples/basic_oled_example
+              - examples/sector_timing_example
+              - examples/real_track_data_debug
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile sketches
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.board.fqbn }}
+          platforms: ${{ matrix.board.platforms }}
+          libraries: |
+            - source-path: ./
+            - name: ArxTypeTraits
+            - name: Adafruit GPS Library
+            - name: Adafruit GFX Library
+            - name: Adafruit SSD1306
+            - name: Adafruit SH110X
+          sketch-paths: ${{ matrix.board.sketch-paths }}
+          enable-deltas-report: true
+
+      - name: Upload size deltas report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-deltas-${{ matrix.board.alias }}
+          path: sketches-reports
+          if-no-files-found: ignore
