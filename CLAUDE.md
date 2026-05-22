@@ -380,7 +380,19 @@ GitHub Actions workflows live in `.github/workflows/`:
   https://theangryraven.github.io/DovesLapTimer/ (GitHub repo Settings →
   Pages must be set to source = gh-pages branch, folder = /).
 
-All four workflows trigger on push to `main`/`master`, on any PR, and
+- **coverage.yml** — builds the `test/` suite with `g++ --coverage`, runs it,
+  and summarizes line coverage of `src/` with `gcovr`. Gated on every PR via
+  `make coverage` (fails under `COVERAGE_GATE`, default **1%** — intentionally
+  low so it's easy to raise as coverage grows; bump the `COVERAGE_GATE ?= 1`
+  line in `test/Makefile`). On push to master it generates a shields.io
+  endpoint JSON (`make coverage-badge`) and publishes it to the `badges`
+  branch (orphan, badge JSON only) via `peaceiris/actions-gh-pages@v3`. The
+  README badge reads that JSON through `img.shields.io/endpoint`. Current line
+  coverage ~51% — `GeoMath` 100%, `CourseDetector` 93%, `DovesLapTimer` 75%,
+  but `CourseManager` and `WaypointLapTimer` sit at 0% (no direct tests yet —
+  see the path-to-8.5 notes).
+
+All five workflows trigger on push to `main`/`master`, on any PR, and
 manually via `workflow_dispatch`. Status badges are linked at the top of
 README.md.
 

@@ -49,8 +49,13 @@ tests against captured real-world noise.
 ```sh
 cd test
 make run        # build + run all suites; exits non-zero on any failure
-make clean      # remove build/
+make coverage   # build instrumented, run, print gcovr line-coverage summary
+make clean      # remove build/ + coverage artifacts
 ```
+
+`make coverage` enforces a gate (`COVERAGE_GATE`, default 1%) and fails if line
+coverage of `src/` drops below it. Raise the bar as coverage grows:
+`make coverage COVERAGE_GATE=40`, or edit the default in the Makefile.
 
 ## How it works
 

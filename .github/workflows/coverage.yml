@@ -1,0 +1,50 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# Needed to push the generated badge JSON to the `badges` branch.
+permissions:
+  contents: write
+
+jobs:
+  coverage:
+    name: Line coverage (gcovr)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install g++ + gcovr
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++
+          pip install "gcovr>=7,<9"
+
+      - name: Run coverage with gate
+        # Fails the job if line coverage drops below COVERAGE_GATE (see
+        # test/Makefile). Gate starts at 1% — bump it as coverage grows.
+        working-directory: test
+        run: make coverage
+
+      - name: Generate badge JSON
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        working-directory: test
+        run: make coverage-badge
+
+      - name: Stage badge for publish
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          mkdir -p badge-publish
+          cp test/coverage-badge.json badge-publish/
+
+      - name: Publish badge to the `badges` branch
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: badges
+          publish_dir: ./badge-publish
+          force_orphan: true
