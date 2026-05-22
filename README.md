@@ -1,8 +1,3 @@
-# Update
-Full datalogger + STL case files dropped over at [https://github.com/TheAngryRaven/DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (no readme yet)
-
-Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer) (100% vibe code)
-
 # Doves GPS Lap Timer
 
 [![compile-examples](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml)
@@ -493,3 +488,8 @@ Source code for: `can-bus logger/gps logger/digital gauges`
 [https://github.com/aollin/racechrono-ble-diy-device](https://github.com/aollin/racechrono-ble-diy-device)
 
 Pairs wonderfully with the previously mentioned [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+
+# Update
+Full datalogger + STL case files dropped over at [https://github.com/TheAngryRaven/DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) 
+
+Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer)
