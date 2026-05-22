@@ -4,11 +4,43 @@
 > When adding new features, modifying APIs, fixing bugs, or changing architecture, update the
 > relevant sections below so future sessions don't waste tokens re-exploring the project.
 
+## Development Standards (read this first)
+
+This codebase was deliberately brought up to a professional bar. **Keep it there** — don't
+let it regress. When making any change:
+
+1. **Add tests whenever possible.** This library has a three-layer test suite
+   (`test/`) that is the whole reason changes can be made confidently. New behavior
+   should land *with* a test:
+   - Pure logic / math / state machines → a Layer 2 unit test (`test/test_*.cpp`).
+   - Anything that affects lap-time output → verify against the Layer 3 NMEA replay
+     suite; if you intentionally change timing, update the pinned goldens **and** say
+     why in the commit/PR.
+   - Always run `cd test && make run` before committing. All green, no exceptions.
+   - A bug fix should come with a test that fails before the fix and passes after.
+2. **Keep the CHANGELOG updated.** Every user-facing or notable change goes under the
+   `## [Unreleased]` heading in `CHANGELOG.md` (Keep a Changelog format:
+   Added/Changed/Fixed). On release, move those entries under the new version heading.
+3. **Keep doc comments and the README honest.** Public API changes update the
+   `@brief`/`@param`/`@return` comments (they feed the Doxygen site). If user-facing
+   behavior changes, update `README.md`. Don't let docs claim something the code
+   doesn't do — that's how the Catmull-Rom confusion happened.
+4. **Respect the architecture boundary.** The library does NOT touch GPS hardware or
+   serial. It takes coordinates + time and returns timing. Hardware/parsing belongs in
+   `examples/`, never the core.
+5. **Stay memory-conscious.** Targets go down to AVR Mega. No heap allocation in the
+   GPS hot path; watch SRAM.
+6. **One logical change per PR.** Branch off `master`, let CI (lint + compile matrix +
+   unit tests + docs) go green, fill out the PR template. See `CONTRIBUTING.md` for the
+   full workflow.
+
+In short: tests with changes, changelog updated, docs truthful, no broken windows.
+
 ## Project Overview
 
 **What**: GPS-based lap timing Arduino library for go-kart / racing applications.
 **Author**: Michael Champagne (crimsondove)
-**Version**: 4.0.0
+**Version**: 4.1.0
 **Repo**: https://github.com/TheAngryRaven/DovesLapTimer
 **License**: GPL v3
 **Dependency**: ArxTypeTraits (auto-included by Arduino Library Manager)
