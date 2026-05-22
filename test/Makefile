@@ -53,6 +53,48 @@ run: all
 	fi
 
 clean:
-	rm -rf build/
+	rm -rf build/ coverage/ *.gcno *.gcda *.gcov coverage-badge.json coverage-summary.md
 
-.PHONY: all run clean
+# ----- Coverage -----
+# Instruments the library sources, runs every test binary (gcda accumulates
+# across them), and summarizes line coverage of ../src/ with gcovr. Fails if
+# below COVERAGE_GATE percent. The gate starts intentionally low — raise it
+# as coverage grows. Override on the command line: `make coverage COVERAGE_GATE=40`.
+COVERAGE_GATE ?= 1
+COV_DIR        = coverage
+COV_BINS       = $(TEST_SRCS:%.cpp=$(COV_DIR)/%)
+
+$(COV_DIR)/%: %.cpp $(LIB_SRCS) test_runner.h mock/Arduino.h mock/ArxTypeTraits.h
+	@mkdir -p $(COV_DIR)
+	$(CXX) $(CXXFLAGS) --coverage -o $@ $< $(LIB_SRCS) $(LDFLAGS)
+
+coverage: $(COV_BINS)
+	@for bin in $(COV_BINS); do \
+		echo "Running $$bin"; \
+		$$bin > /dev/null || exit 1; \
+	done
+	@echo ""
+	gcovr --root .. --filter '\.\./src/' \
+	      --fail-under-line $(COVERAGE_GATE) \
+	      --print-summary
+
+# Emit a shields.io endpoint JSON describing line coverage. Used by CI to
+# publish the README badge. Writes coverage-badge.json in the test dir.
+coverage-badge: $(COV_BINS)
+	@for bin in $(COV_BINS); do $$bin > /dev/null || exit 1; done
+	@gcovr --root .. --filter '\.\./src/' --json-summary-pretty -o /tmp/cov.json >/dev/null
+	@python3 -c "import json; \
+d=json.load(open('/tmp/cov.json')); \
+p=round(d['line_percent']); \
+c='brightgreen' if p>=90 else 'green' if p>=75 else 'yellowgreen' if p>=60 else 'yellow' if p>=40 else 'orange' if p>=20 else 'red'; \
+json.dump({'schemaVersion':1,'label':'coverage','message':f'{p}%','color':c}, open('coverage-badge.json','w'))"
+	@echo "wrote coverage-badge.json:" && cat coverage-badge.json && echo ""
+
+# Emit a Markdown coverage report (overall + per-file) for posting as a
+# per-PR comment. Writes coverage-summary.md in the test dir.
+coverage-summary: $(COV_BINS)
+	@for bin in $(COV_BINS); do $$bin > /dev/null || exit 1; done
+	@gcovr --root .. --filter '\.\./src/' --markdown coverage-summary.md >/dev/null
+	@echo "wrote coverage-summary.md"
+
+.PHONY: all run clean coverage coverage-badge coverage-summary

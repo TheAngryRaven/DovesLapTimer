@@ -18,3 +18,11 @@ build/
 
 # Doxygen generated output (deployed to gh-pages branch by CI)
 docs-build/
+
+# Coverage artifacts (gcov instrumentation + generated badge)
+coverage/
+*.gcno
+*.gcda
+*.gcov
+test/coverage-badge.json
+test/coverage-summary.md

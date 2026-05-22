@@ -3,6 +3,7 @@
 [![compile-examples](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/compile-examples.yml)
 [![arduino-lint](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/arduino-lint.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/arduino-lint.yml)
 [![unit-tests](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/unit-tests.yml)
+[![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/TheAngryRaven/DovesLapTimer/badges/coverage-badge.json)](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/coverage.yml)
 [![docs](https://github.com/TheAngryRaven/DovesLapTimer/actions/workflows/docs.yml/badge.svg)](https://theangryraven.github.io/DovesLapTimer/)
 
 Library for Arduino for creating damned accurate lap-timings using GPS data, on par with other commercial solutions.
