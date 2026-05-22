@@ -6,9 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Needed to push the generated badge JSON to the `badges` branch.
+# contents: write  -> push the badge JSON to the `badges` branch (master only)
+# pull-requests: write -> post the per-PR coverage summary comment
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   coverage:
@@ -29,6 +31,43 @@ jobs:
         working-directory: test
         run: make coverage
 
+      # ---- Per-PR coverage summary comment ----
+      - name: Generate coverage summary
+        if: github.event_name == 'pull_request'
+        working-directory: test
+        run: make coverage-summary
+
+      - name: Post coverage summary comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- coverage-summary -->';
+            let report;
+            try {
+              report = fs.readFileSync('test/coverage-summary.md', 'utf8');
+            } catch (e) {
+              core.warning('No coverage-summary.md found; skipping comment.');
+              return;
+            }
+            const body = `${marker}\n${report}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            try {
+              const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+              const existing = comments.data.find(c => c.body && c.body.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number, body });
+              }
+            } catch (e) {
+              // Fork PRs get a read-only token and can't comment — warn, don't fail.
+              core.warning(`Could not post coverage comment: ${e.message}`);
+            }
+
+      # ---- Badge publish (master only) ----
       - name: Generate badge JSON
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: test

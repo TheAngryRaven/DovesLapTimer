@@ -387,10 +387,13 @@ GitHub Actions workflows live in `.github/workflows/`:
   line in `test/Makefile`). On push to master it generates a shields.io
   endpoint JSON (`make coverage-badge`) and publishes it to the `badges`
   branch (orphan, badge JSON only) via `peaceiris/actions-gh-pages@v3`. The
-  README badge reads that JSON through `img.shields.io/endpoint`. Current line
-  coverage ~51% — `GeoMath` 100%, `CourseDetector` 93%, `DovesLapTimer` 75%,
-  but `CourseManager` and `WaypointLapTimer` sit at 0% (no direct tests yet —
-  see the path-to-8.5 notes).
+  README badge reads that JSON through `img.shields.io/endpoint`. On every PR
+  it also posts/updates a per-PR coverage summary comment (gcovr `--markdown`
+  via first-party `actions/github-script` — no third-party service, runs
+  entirely in-runner). Current line coverage ~51% — `GeoMath` 100%,
+  `CourseDetector` 93%, `DovesLapTimer` 75%, but `CourseManager` and
+  `WaypointLapTimer` sit at 0% (no direct tests yet — see the path-to-8.5
+  notes).
 
 All five workflows trigger on push to `main`/`master`, on any PR, and
 manually via `workflow_dispatch`. Status badges are linked at the top of

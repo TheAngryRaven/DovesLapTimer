@@ -53,7 +53,7 @@ run: all
 	fi
 
 clean:
-	rm -rf build/ coverage/ *.gcno *.gcda *.gcov coverage-badge.json
+	rm -rf build/ coverage/ *.gcno *.gcda *.gcov coverage-badge.json coverage-summary.md
 
 # ----- Coverage -----
 # Instruments the library sources, runs every test binary (gcda accumulates
@@ -90,4 +90,11 @@ c='brightgreen' if p>=90 else 'green' if p>=75 else 'yellowgreen' if p>=60 else 
 json.dump({'schemaVersion':1,'label':'coverage','message':f'{p}%','color':c}, open('coverage-badge.json','w'))"
 	@echo "wrote coverage-badge.json:" && cat coverage-badge.json && echo ""
 
-.PHONY: all run clean coverage coverage-badge
+# Emit a Markdown coverage report (overall + per-file) for posting as a
+# per-PR comment. Writes coverage-summary.md in the test dir.
+coverage-summary: $(COV_BINS)
+	@for bin in $(COV_BINS); do $$bin > /dev/null || exit 1; done
+	@gcovr --root .. --filter '\.\./src/' --markdown coverage-summary.md >/dev/null
+	@echo "wrote coverage-summary.md"
+
+.PHONY: all run clean coverage coverage-badge coverage-summary

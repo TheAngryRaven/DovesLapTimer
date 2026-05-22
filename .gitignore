@@ -25,3 +25,4 @@ coverage/
 *.gcda
 *.gcov
 test/coverage-badge.json
+test/coverage-summary.md
