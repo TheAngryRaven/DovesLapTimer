@@ -14,6 +14,8 @@ Library for Arduino for creating damned accurate lap-timings using GPS data, on 
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, the 4 points closest to the line are used to interpolate the exact crossing — see [Interpolation modes](#interpolation-modes) below for the linear vs. Catmull-Rom trade-off.
 
+Curious *how* the crossing detection actually works — and why the obvious approaches (distance-to-line, heading, compass) all fail? [`DETECTION.md`](DETECTION.md) is the deep-dive, including the MyLaps validation results.
+
 ## Quickstart
 
 ```cpp

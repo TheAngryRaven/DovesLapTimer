@@ -48,10 +48,10 @@ DovesLapTimer/
 ├── wokwi/                       # Wokwi simulator custom GPS chip
 │   ├── gps-fake.chip.c
 │   └── gps-fake.chip.json
-├── images/                      # Diagrams for HELPME.md
+├── images/                      # Diagrams for DETECTION.md
 ├── library.properties           # Arduino library metadata
 ├── README.md                    # User-facing docs and API reference
-├── HELPME.md                    # Technical deep-dive on crossing detection algorithm
+├── DETECTION.md                 # Technical deep-dive on crossing detection algorithm (+ validation evidence)
 ├── LICENSE                      # GPL v3
 └── .github/FUNDING.yml
 ```
@@ -339,7 +339,7 @@ GitHub Actions workflows live in `.github/workflows/`:
   doesn't depend on any Arduino toolchain. Fails the run on any failed assert.
 
 - **docs.yml** — builds Doxygen HTML from `src/` + `examples/` + `README.md` +
-  `HELPME.md` using the doxygen-awesome-css theme vendored under `docs/`.
+  `DETECTION.md` using the doxygen-awesome-css theme vendored under `docs/`.
   On push to master, deploys the output (`docs-build/html/`) to the
   `gh-pages` branch via `peaceiris/actions-gh-pages@v3` with
   `force_orphan: true` (keeps the gh-pages branch lean — overwrites
