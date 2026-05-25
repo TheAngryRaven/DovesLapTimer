@@ -14,9 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it, breaking the host test build with `'M_PI' was not declared in this scope`.
 
 ### Added
+
 - Project governance docs: `CONTRIBUTING.md` (dev setup, the 3-layer testing
   philosophy, PR workflow, release process), `SECURITY.md`, GitHub issue
   forms (bug report + feature request) and a pull-request template.
+- **`getCurrentSpeedKmh()` and `getCurrentSpeedMph()`** getters to
+  `DovesLapTimer.h`, `DovesLapTimer.cpp`, `WaypointLapTimer.h` and `WaypointLapTimer.cpp`
 
 ## [4.1.0] – 2026-05-21
 
@@ -26,6 +29,7 @@ docs, less duplication, and accurate documentation of where Catmull-Rom
 actually matters.
 
 ### Added
+
 - **Layer 1 CI** — three GitHub Actions workflows:
   `arduino-lint` (Library Manager compliance), `compile-examples` (every
   example compiles across Arduino Mega, Uno, ESP32, and XIAO nRF52840),
@@ -54,6 +58,7 @@ actually matters.
   `setDetectionProximityMeters` on `CourseDetector`.
 
 ### Changed
+
 - **`checkStartFinish` and `checkSectorLine` refactored** to share a
   single `_detectLineCrossing` zone state machine. Net –31 lines, single
   source of truth for entry/buffer/interpolate logic, no behavior
@@ -78,6 +83,7 @@ actually matters.
   (previously described the pre-fix "first crossing wins" rule).
 
 ### Fixed
+
 - **DirectionDetector mis-classified forward as reverse** when the
   racing line missed a sector or GPS rate was too low to catch the
   zone — the detector used to lock direction from whichever single
@@ -104,6 +110,7 @@ actually matters.
   demoted to h3.
 
 ### CI / Tooling
+
 - Added `peaceiris/actions-gh-pages@v3` for docs deployment.
 - doxygen-awesome-css v2.3.4 vendored under `docs/` (MIT-licensed)
   so the docs build doesn't depend on the network at CI time.
@@ -115,6 +122,7 @@ actually matters.
 ## [4.0.0] – 2026
 
 ### Added
+
 - **Automatic course detection** via `CourseManager`. Drive a lap
   and the library figures out which course layout you're on by
   matching driven distance against known courses. Supports up to
@@ -130,6 +138,7 @@ actually matters.
 - Configurable speed / proximity / detection thresholds.
 
 ### Earlier history
+
 For pre-4.0 history (initial sector timing, Catmull-Rom interpolation
 work, etc.) see the git log directly.
 

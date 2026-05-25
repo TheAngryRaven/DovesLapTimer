@@ -338,6 +338,19 @@ public:
    * value indicates that the current lap's pace is faster.
    */
   float getPaceDifference() const;
+  /**
+   * @brief Gets the current speed in kilometers per hour.
+   *
+   * @return The current speed in km/h.
+   */
+  float getCurrentSpeedKmh() const;
+  /**
+   * @brief Gets the current speed in miles per hour.
+   *
+   * @return The current speed in mph.
+   */
+  float getCurrentSpeedMph() const;
+
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Sector timing methods

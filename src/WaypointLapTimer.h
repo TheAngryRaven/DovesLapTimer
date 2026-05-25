@@ -55,6 +55,8 @@ public:
   float getTotalDistanceTraveled() const;
   int getBestLapNumber() const;
   float getPaceDifference() const;
+  float getCurrentSpeedKmh() const;
+  float getCurrentSpeedMph() const;
 
   float getLastLapDistance() const;
   float getBestLapDistance() const;

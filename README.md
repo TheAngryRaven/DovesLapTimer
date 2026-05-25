@@ -10,7 +10,7 @@ Library for Arduino for creating damned accurate lap-timings using GPS data, on 
 Once the driver is within a specified threshold of the line, it begins logging gps lat/lng/alt/speed.
 Once past the threshold, the 4 points closest to the line are used to interpolate the exact crossing — see [Interpolation modes](#interpolation-modes) below for the linear vs. Catmull-Rom trade-off.
 
-Curious *how* the crossing detection actually works — and why the obvious approaches (distance-to-line, heading, compass) all fail? [`DETECTION.md`](DETECTION.md) is the deep-dive, including the MyLaps validation results.
+Curious _how_ the crossing detection actually works — and why the obvious approaches (distance-to-line, heading, compass) all fail? [`DETECTION.md`](DETECTION.md) is the deep-dive, including the MyLaps validation results.
 
 ## Quickstart
 
@@ -54,79 +54,81 @@ To run locally: `cd test && make run`.
 
 ## What's New in v4.0
 
-* **Automatic Course Detection** - Drive a lap at any track and the library figures out which course layout you're on by matching driven distance against known courses. No manual selection needed.
-* **Multi-Course Support** - Define up to 8 course layouts per track (different configurations, rental vs. pro layouts, etc). `CourseManager` orchestrates them all.
-* **Direction Detection** - Automatically detects whether you're driving the course forward or reverse from the temporal order of sector-line crossings within a lap window. Glitch-resistant — needs both physical sector lines crossed in a lap before resolving, so a single GPS teleport can't lock the wrong direction.
-* **"Lap Anything" Fallback** - If course detection fails after 3 attempts, falls back to `WaypointLapTimer` which drops a waypoint and uses proximity-based timing. Works on any track, anywhere - no pre-configured lines needed.
-* **Configurable Thresholds** - Speed, proximity, and detection thresholds are now adjustable at runtime via setter methods.
+- **Automatic Course Detection** - Drive a lap at any track and the library figures out which course layout you're on by matching driven distance against known courses. No manual selection needed.
+- **Multi-Course Support** - Define up to 8 course layouts per track (different configurations, rental vs. pro layouts, etc). `CourseManager` orchestrates them all.
+- **Direction Detection** - Automatically detects whether you're driving the course forward or reverse from the temporal order of sector-line crossings within a lap window. Glitch-resistant — needs both physical sector lines crossed in a lap before resolving, so a single GPS teleport can't lock the wrong direction.
+- **"Lap Anything" Fallback** - If course detection fails after 3 attempts, falls back to `WaypointLapTimer` which drops a waypoint and uses proximity-based timing. Works on any track, anywhere - no pre-configured lines needed.
+- **Configurable Thresholds** - Speed, proximity, and detection thresholds are now adjustable at runtime via setter methods.
 
 ## Supported Hardware: MCU
-While this is technially an arduino library, this needs a device with a large amount of ram and processing power due to all the floating point math.
-* Arduino Mega+
-  * Technically appears to be working, really pushing it
-* [Seed NRF52840 (Recommended)](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
-  * Has a dedicated high speed FPU for both floats and doubles
-  * Fast enough to support GPS/Display/SDCard Logging
-  * Really low power
-    * 65mA~ with screen, gps, and bluetooth
-  * 256KB RAM, 1MB Flash
-  * Sense version **not** required
 
+While this is technially an arduino library, this needs a device with a large amount of ram and processing power due to all the floating point math.
+
+- Arduino Mega+
+  - Technically appears to be working, really pushing it
+- [Seed NRF52840 (Recommended)](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+  - Has a dedicated high speed FPU for both floats and doubles
+  - Fast enough to support GPS/Display/SDCard Logging
+  - Really low power
+    - 65mA~ with screen, gps, and bluetooth
+  - 256KB RAM, 1MB Flash
+  - Sense version **not** required
 
 ## Supported Hardware: GPS
-  Getting GPS data is your job, not mine, but here are a couple I reccomend that work well with the Adafruit GPS library.
 
-  >**Note:** The [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino) has an example on how to send ublox configuration commands while receiving only NMEA sentences.
-  >
-  >**Note:** If GPS is not an authentic UBLOX module, sending configuration commands might, fail but receiving data should probably still work.
+Getting GPS data is your job, not mine, but here are a couple I recommend that work well with the Adafruit GPS library.
 
-* [Matek SAM-M10Q](https://www.amazon.com/SAM-M10Q-Supports-Concurrent-Reception-Multirotor/dp/B0BZ7931G7/)
-  * 25hz GPS only
-  * 16hz GPS+GALILEO+GLONASS
-  * Uses NMEA or UBLOX commands (NMEA for all included examples)
-* [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
-  * 18hz GPS only
-  * 10hz GPS+GLONASS
-  * Uses NMEA or UBLOX commands (NMEA for all included examples)
-* **Check your local/regional RC plane/drone resources for a serial compatible GPS!**
-  * **US:** [Race Day Quads](https://www.racedayquads.com/)
-  * **EU:** [GetFPV](https://www.getfpv.com/)
+> **Note:** The [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino) has an example on how to send ublox configuration commands while receiving only NMEA sentences.
+>
+> **Note:** If GPS is not an authentic UBLOX module, sending configuration commands might, fail but receiving data should probably still work.
 
+- [Matek SAM-M10Q](https://www.amazon.com/SAM-M10Q-Supports-Concurrent-Reception-Multirotor/dp/B0BZ7931G7/)
+  - 25hz GPS only
+  - 16hz GPS+GALILEO+GLONASS
+  - Uses NMEA or UBLOX commands (NMEA for all included examples)
+- [Matek SAM-M8Q](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
+  - 18hz GPS only
+  - 10hz GPS+GLONASS
+  - Uses NMEA or UBLOX commands (NMEA for all included examples)
+- **Check your local/regional RC plane/drone resources for a serial compatible GPS!**
+  - **US:** [Race Day Quads](https://www.racedayquads.com/)
+  - **EU:** [GetFPV](https://www.getfpv.com/)
 
 ## Supported Hardware: Display
-* [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
-  * **Note:** Only here for the included demo
-  * **Note:** Demo also includes pre-compile switch for 1306 displays
 
+- [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2)
+  - **Note:** Only here for the included demo
+  - **Note:** Demo also includes pre-compile switch for 1306 displays
 
 ## Supported Functions
-* Current lap
-  * Time
-  * Distance
-  * Number
-* Last lap
-  * Time
-  * Distance
-* Best lap
-  * Time
-  * Distance
-  * Number
-* Pace difference against current and best lap
-* **Sector timing** (optional)
-  * 3 sectors per lap (Sector 1, 2, and 3)
-  * Best time for each sector
-  * Current lap sector times
-  * Optimal lap time (sum of best sectors)
-  * Track which lap achieved best sector times
-* **Direction detection** (v4.0)
-  * Automatic forward/reverse detection based on sector crossing order
-* **Automatic course detection** (v4.0)
-  * Detects which course layout the driver is on by matching driven distance
-  * Supports up to 8 course layouts per track
-* **"Lap Anything" fallback** (v4.0)
-  * Proximity-based lap timing when no course is detected
-  * Works on any track without pre-configured crossing lines
-* List lap times
+
+- Current lap
+  - Time
+  - Distance
+  - Number
+- Last lap
+  - Time
+  - Distance
+- Best lap
+  - Time
+  - Distance
+  - Number
+- Pace difference against current and best lap
+- **Sector timing** (optional)
+  - 3 sectors per lap (Sector 1, 2, and 3)
+  - Best time for each sector
+  - Current lap sector times
+  - Optimal lap time (sum of best sectors)
+  - Track which lap achieved best sector times
+- **Direction detection** (v4.0)
+  - Automatic forward/reverse detection based on sector crossing order
+- **Automatic course detection** (v4.0)
+  - Detects which course layout the driver is on by matching driven distance
+  - Supports up to 8 course layouts per track
+- **"Lap Anything" fallback** (v4.0)
+  - Proximity-based lap timing when no course is detected
+  - Works on any track without pre-configured crossing lines
+- List lap times
 
 ## Architecture (v4.0)
 
@@ -149,10 +151,10 @@ When the driver exits the crossing zone, the library has a buffer of GPS fixes
 straddling the line and needs to compute the exact crossing time + position.
 Two modes are available:
 
-| | Affects lap time? | Affects crossing-point coords? | When to use |
-|---|---|---|---|
-| `forceLinearInterpolation()` *(default)* | yes — linear blend by distance + speed | yes — straight-line blend | Always works. The right default for kart timing — sub-10ms regression-tested against real fixtures. |
-| `forceCatmullRomInterpolation()` | **no** — falls back to linear for time/odometer | yes — smooth spline if 4 control points available, else linear | Useful only if you care about the reported crossing lat/lng coords (e.g. plotting where on the line you crossed). Lap-time output is identical to linear. |
+|                                          | Affects lap time?                               | Affects crossing-point coords?                                 | When to use                                                                                                                                               |
+| ---------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `forceLinearInterpolation()` _(default)_ | yes — linear blend by distance + speed          | yes — straight-line blend                                      | Always works. The right default for kart timing — sub-10ms regression-tested against real fixtures.                                                       |
+| `forceCatmullRomInterpolation()`         | **no** — falls back to linear for time/odometer | yes — smooth spline if 4 control points available, else linear | Useful only if you care about the reported crossing lat/lng coords (e.g. plotting where on the line you crossed). Lap-time output is identical to linear. |
 
 **Important context**: Catmull-Rom used to interpolate everything including time, but spline overshoot occasionally produced wrong lap times. The fix limited the spline to lat/lng of the crossing point — time and odometer are always linear. So switching modes has no effect on `getLastLapTime()` / `getBestLapTime()` / sector times. If you only care about timing, leave the default alone.
 
@@ -166,6 +168,7 @@ See the source code, specifically the [DovesLapTimer.h](src/DovesLapTimer.h) fil
 The code should have clarifying comments wherever there are any unclear bits.
 
 #### Initialize
+
 ```c
   // Initialize with internal debugger, and or crossingThreshold (default 7)
   #define DEBUG_SERIAL Serial
@@ -176,7 +179,9 @@ The code should have clarifying comments wherever there are any unclear bits.
   // default threshold is 7 meters, this is perfectly valid
   DovesLapTimer lapTimer;
 ```
+
 #### Setup()
+
 ```c
   // define start/finish line
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
@@ -196,12 +201,15 @@ The code should have clarifying comments wherever there are any unclear bits.
   lapTimer.reset();
 
 ```
+
 #### Loop()->gpsLoop()
+
 create a simple method with the signature `unsigned long getGpsTimeInMilliseconds();` to... as it says, get the current time from the gps in milliseconds.
 
 Now inside of your gps loop, add something like the following
 
 All of the lap timing magic is happening inside of `checkStartFinish` consider that our "timing loop".
+
 ```c
   // update the timer loop only when we have fully fixed data
   if (gps->fix) {
@@ -215,6 +223,7 @@ All of the lap timing magic is happening inside of `checkStartFinish` consider t
 ```
 
 Here is an example `getGpsTimeInMilliseconds()`
+
 ```c
   /**
    * @brief Returns the GPS time since midnight in milliseconds
@@ -232,7 +241,9 @@ Here is an example `getGpsTimeInMilliseconds()`
 ```
 
 #### Retrieving Data
-Now if you want any running information,  you have the following...
+
+Now if you want any running information, you have the following...
+
 ```c
   // Basic lap timing
   bool getRaceStarted() const; // True if the race has started, false otherwise (passed the line one time).
@@ -247,6 +258,8 @@ Now if you want any running information,  you have the following...
   float getLastLapDistance() const; // The distance traveled during the last lap in meters.
   float getBestLapDistance() const; // The distance traveled during the best lap in meters.
   float getTotalDistanceTraveled() const; // The total distance traveled in meters.
+  float getCurrentSpeedKmh() const; // Current speed in km/h
+  float getCurrentSpeedMph() const; // Current speed in mph
   int getBestLapNumber() const; // The lap number of the best lap.
   int getLaps() const; // The total number of laps completed.
 
@@ -375,6 +388,7 @@ void loop() {
 The `WaypointLapTimer` is the fallback that kicks in when no pre-configured course matches. It can also be used standalone if you just want proximity-based timing without any crossing lines.
 
 **How it works:**
+
 1. Wait for speed >= 20 mph, drop a waypoint at that position
 2. Drive away (minimum 100m traveled)
 3. When you return near the waypoint (within 30m), it buffers approach points
@@ -417,10 +431,10 @@ If no candidates match or validation fails 3 times, `CourseManager` activates "L
 
 When sector lines are configured, the library automatically detects whether you're driving the course forward or in reverse:
 
-* After the start/finish line is first crossed, the first sector line you cross determines direction
-* Sector 2 first = **forward** (`DIR_FORWARD`)
-* Sector 3 first = **reverse** (`DIR_REVERSE`)
-* Once resolved, direction is locked and sector lines are remapped internally so timing stays correct
+- After the start/finish line is first crossed, the first sector line you cross determines direction
+- Sector 2 first = **forward** (`DIR_FORWARD`)
+- Sector 3 first = **reverse** (`DIR_REVERSE`)
+- Once resolved, direction is locked and sector lines are remapped internally so timing stays correct
 
 ```c
   int getDirection() const;        // DIR_UNKNOWN (0), DIR_FORWARD (1), DIR_REVERSE (2)
@@ -428,33 +442,34 @@ When sector lines are configured, the library automatically detects whether you'
 ```
 
 ## Examples
-* [WokWi Emulator (basic oled example)](https://wokwi.com/projects/367029104171726849)
-  * Includes 4 laps of data
-  * Custom Chip included in repo [./wokwi/](wokwi/)
-    * in-browser demo does not include/support uBlox configuration commands
-* [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
-  * Shows all basic functionality, along with a simple display literally showing all basic functionality.
-  * Assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
-    * If not authentic, sending configuration commands might fail but receiving data should probably still work.
-  * Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
-    * Might need to remove/change LED_GREEN blinker
-  * [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2).
-    * Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
-    * Too tired to make serial only logger, but you can very easily remove it.
-  * Borb load screen
-* [Sector Timing Example](examples/sector_timing_example/sector_timing_example.ino)
-  * Demonstrates sector split timing functionality
-  * Shows how to configure sector 2 and sector 3 lines
-  * Displays best sector times and optimal lap calculation
-  * Tracks which lap achieved each best sector time
-  * Serial output only (easy to integrate into existing projects)
-* [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
-  * **REQUIRES A LOT OF RAM TO STORE SAMPLE DATA**
-  * **Serial Only** No GPS Required
-  * Simple test using data recorded at [Orlando Kart Center](https://orlandokartcenter.com/)
-    * MyLaps    : 1:08:807 (magnetic/official)
-    * DovesTimer: 1:08:748 (LINEAR)
-    * DovesTimer: 1:08.745 (CATMULLROM)
+
+- [WokWi Emulator (basic oled example)](https://wokwi.com/projects/367029104171726849)
+  - Includes 4 laps of data
+  - Custom Chip included in repo [./wokwi/](wokwi/)
+    - in-browser demo does not include/support uBlox configuration commands
+- [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino)
+  - Shows all basic functionality, along with a simple display literally showing all basic functionality.
+  - Assumes adafruit compatible [authentic ublox GPS](https://www.amazon.com/Matek-Module-SAM-M8Q-GLONASS-Galileo/dp/B07Q2SGQQT)
+    - If not authentic, sending configuration commands might fail but receiving data should probably still work.
+  - Originally for [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
+    - Might need to remove/change LED_GREEN blinker
+  - [128x64 i2c 110X display](https://www.amazon.com/dp/B08V97FYD2).
+    - Display is NOT PRETTY, it is an EXAMPLE / DEBUG SCREEN.
+    - Too tired to make serial only logger, but you can very easily remove it.
+  - Borb load screen
+- [Sector Timing Example](examples/sector_timing_example/sector_timing_example.ino)
+  - Demonstrates sector split timing functionality
+  - Shows how to configure sector 2 and sector 3 lines
+  - Displays best sector times and optimal lap calculation
+  - Tracks which lap achieved each best sector time
+  - Serial output only (easy to integrate into existing projects)
+- [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
+  - **REQUIRES A LOT OF RAM TO STORE SAMPLE DATA**
+  - **Serial Only** No GPS Required
+  - Simple test using data recorded at [Orlando Kart Center](https://orlandokartcenter.com/)
+    - MyLaps : 1:08:807 (magnetic/official)
+    - DovesTimer: 1:08:748 (LINEAR)
+    - DovesTimer: 1:08.745 (CATMULLROM)
 
 ## Memory Usage
 
@@ -467,16 +482,18 @@ If using `DovesLapTimer` standalone (no `CourseManager`), memory usage is much l
 This library is [licensed](LICENSE) under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
 ## Dependencies
-* Auto-Included/Required
-  * [ArxTypeTraits](https://github.com/hideakitai/ArxTypeTraits/actions)
-* Nice To Use / Used in examples
-  * [Adafruit_GPS](https://github.com/adafruit/Adafruit_GPS)
-    * My go-to gps library
-  * [Adafruit-GFX-Library](https://github.com/adafruit/Adafruit-GFX-Library)
-  * [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
-  * [Adafruit_SH110x](https://github.com/wonho-maker/Adafruit_SH110x)
+
+- Auto-Included/Required
+  - [ArxTypeTraits](https://github.com/hideakitai/ArxTypeTraits/actions)
+- Nice To Use / Used in examples
+  - [Adafruit_GPS](https://github.com/adafruit/Adafruit_GPS)
+    - My go-to gps library
+  - [Adafruit-GFX-Library](https://github.com/adafruit/Adafruit-GFX-Library)
+  - [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
+  - [Adafruit_SH110x](https://github.com/wonho-maker/Adafruit_SH110x)
 
 ## More features?
+
 If you want more features, go and download this dudes app RaceChrono (available on both iPhone and Android), and send the data to your phone, or log it and send it after the race.
 
 RaceChrono is not a sponsor or affiliated, I just really enjoy the app, but don't like keeping my phone in a go-kart.
@@ -493,6 +510,7 @@ Source code for: `can-bus logger/gps logger/digital gauges`
 Pairs wonderfully with the previously mentioned [Seed NRF52840](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
 
 # Update
-Full datalogger + STL case files dropped over at [https://github.com/TheAngryRaven/DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) 
+
+Full datalogger + STL case files dropped over at [https://github.com/TheAngryRaven/DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger)
 
 Dataviewer: [https://github.com/TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer)
