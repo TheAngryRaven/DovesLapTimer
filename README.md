@@ -76,7 +76,7 @@ While this is technially an arduino library, this needs a device with a large am
 
 ## Supported Hardware: GPS
 
-Getting GPS data is your job, not mine, but here are a couple I reccomend that work well with the Adafruit GPS library.
+Getting GPS data is your job, not mine, but here are a couple I recommend that work well with the Adafruit GPS library.
 
 > **Note:** The [Basic Oled Example](examples/basic_oled_example/basic_oled_example.ino) has an example on how to send ublox configuration commands while receiving only NMEA sentences.
 >
