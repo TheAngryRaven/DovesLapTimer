@@ -276,6 +276,14 @@ float WaypointLapTimer::getPaceDifference() const {
   return currentPace - bestPace;
 }
 
+float WaypointLapTimer::getCurrentSpeedKmh() const {
+  return _currentSpeedKmh;
+}
+
+float WaypointLapTimer::getCurrentSpeedMph() const {
+  return _currentSpeedKmh / 1.60934f;
+}
+
 float WaypointLapTimer::getLastLapDistance() const {
   return _lastLapDistance;
 }

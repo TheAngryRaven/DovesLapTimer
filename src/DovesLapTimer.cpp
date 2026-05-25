@@ -834,6 +834,12 @@ float DovesLapTimer::getPaceDifference() const {
 
   return paceDiff;
 }
+float DovesLapTimer::getCurrentSpeedKmh() const {
+  return currentSpeedkmh;
+}
+float DovesLapTimer::getCurrentSpeedMph() const {
+  return currentSpeedkmh / 1.60934f;
+}
 
 /////////// sector timing getters
 
