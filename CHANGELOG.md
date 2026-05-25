@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`M_PI` portability** — `GeoMath.h` now provides a fallback `#define M_PI`
+  when the platform's `<math.h>` doesn't expose it. `M_PI` is a POSIX/BSD
+  extension, not standard C/C++; glibc happens to expose it by default but
+  stricter standard libraries (under `-std=c++NN` / `__STRICT_ANSI__`) hide
+  it, breaking the host test build with `'M_PI' was not declared in this scope`.
+
 ### Added
 - Project governance docs: `CONTRIBUTING.md` (dev setup, the 3-layer testing
   philosophy, PR workflow, release process), `SECURITY.md`, GitHub issue

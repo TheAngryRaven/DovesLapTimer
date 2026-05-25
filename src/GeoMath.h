@@ -13,6 +13,14 @@
 
 #include <math.h>
 
+// M_PI is not part of the C/C++ standard — it's a POSIX/BSD extension that
+// glibc happens to expose by default but stricter libcs (e.g. under
+// -std=c++NN / __STRICT_ANSI__) hide. Define a fallback so the library
+// compiles everywhere.
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 static const double GEOMATH_RADIUS_EARTH = 6371.0 * 1000; // meters
 
 static inline double geoHaversine(double lat1, double lon1, double lat2, double lon2) {
