@@ -50,6 +50,10 @@ public:
   bool hasWaypoint() const;
   int getRankedMatchCount() const;
   const DetectionCandidate* getRankedMatches() const;
+  // Completed proximity passes (full laps back at the waypoint) that matched
+  // no configured course. CourseManager uses this to reach the Lap Anything
+  // fallback even when the detector never produces candidates to reject.
+  int getNoMatchCount() const;
 
 private:
   void _checkSpeedThreshold(double lat, double lng, float speedKmh, float totalOdometer);
@@ -65,6 +69,7 @@ private:
   int _detectedCourseIndex;
   DetectionCandidate _rankedMatches[MAX_COURSES];
   int _rankedMatchCount;
+  int _noMatchCount;
   float _speedThresholdMph;
   float _detectionProximityMeters;
 };

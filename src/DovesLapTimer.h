@@ -10,7 +10,20 @@
 #define _DOVES_LAP_TIMER_H
 
 #include "ArxTypeTraits.h"
+#include "GeoMath.h"
 using TRITYPE = double;
+
+// On classic AVR (Mega, Uno) `double` is a 32-bit float (~7 significant
+// digits). At real-world latitudes/longitudes that quantizes position to
+// roughly 0.2-0.75 m and pushes per-fix haversine half-angle differences
+// below float precision: lap *counting* still works (the 7 m crossing
+// threshold absorbs it) but odometer increments and crossing interpolation
+// carry large relative error. The full advertised precision requires a
+// target with true 64-bit double (nRF52840, ESP32, SAMD51, RP2040, ...).
+// See README "Hardware" notes.
+#if defined(__SIZEOF_DOUBLE__) && (__SIZEOF_DOUBLE__ < 8)
+#warning "DovesLapTimer: 'double' is only 32 bits on this target (classic AVR). Lap counting works but GPS math runs degraded - distances and interpolated crossing times will be noticeably less accurate. Use a 64-bit-double MCU (e.g. XIAO nRF52840) for full precision."
+#endif
 
 #define CROSSING_LINE_SIDE_A -1
 #define CROSSING_LINE_SIDE_EXACT 0
@@ -22,12 +35,22 @@ using TRITYPE = double;
 #define COURSE_DETECT_MIN_DISTANCE_METERS  200.0
 #define COURSE_DETECT_DISTANCE_TOLERANCE_PCT  0.25
 #define COURSE_DETECT_MAX_REJECTIONS  3
-#define METERS_TO_FEET  3.28084
+// Completed proximity passes (full laps back at the waypoint) that matched
+// no configured course length before CourseManager falls back to Lap
+// Anything. Without this, a wrong/missing course config left detection in
+// WAYPOINT_SET forever while the WaypointLapTimer's laps were never surfaced.
+#define COURSE_DETECT_MAX_NO_MATCH_PASSES  3
+// Distance failsafe: if detection is still incomplete after driving
+// factor x (longest configured course length), or the floor below for very
+// short courses, fall back to Lap Anything. Catches the "never returns to
+// within 10m of the waypoint" hang that pass counting can't see.
+#define COURSE_DETECT_FALLBACK_DISTANCE_FACTOR  4.0
+#define COURSE_DETECT_FALLBACK_MIN_METERS  2000.0
+#define METERS_TO_FEET  GEOMATH_METERS_TO_FEET
 
 // Waypoint lap timer constants
 #define WAYPOINT_LAP_MIN_DISTANCE_METERS  100.0
 #define WAYPOINT_LAP_PROXIMITY_METERS  30.0
-#define WAYPOINT_LAP_BUFFER_SIZE  50
 
 // Direction detection
 #define DIR_UNKNOWN  0
@@ -58,6 +81,11 @@ using TRITYPE = double;
 // a crossing line. A larger gap means the GPS time base stepped (e.g. u-blox
 // re-acquisition) and the pair cannot be interpolated coherently.
 #define CROSSING_MAX_FIX_GAP_MS  10000UL
+
+// The straddling pair's summed distance to the line is validated against
+// max(crossingThresholdMeters, factor * pair spacing) so that low-rate GPS
+// (widely spaced fixes) doesn't fail validation purely on sample density.
+#define CROSSING_PAIR_SPACING_FACTOR  1.25
 
 /**
  * @brief Elapsed milliseconds between two milliseconds-since-midnight timestamps.
@@ -184,9 +212,10 @@ public:
    *
    * This function takes the coordinates of a point (pointX, pointY) and a line segment
    * defined by two endpoints (startX, startY) and (endX, endY), and returns the shortest
-   * distance between the point and the line segment. The distance is calculated
-   * in the same unit as the input coordinates (e.g., degrees for latitude and
-   * longitude values).
+   * distance between the point and the line segment. Inputs are decimal-degree
+   * coordinates; the projection onto the segment happens in degree space, but
+   * every return path measures the final distance via haversine, so the
+   * result is in **meters**.
    *
    * @param pointX The x-coordinate of the point.
    * @param pointY The y-coordinate of the point.
@@ -194,7 +223,7 @@ public:
    * @param startY The y-coordinate of the first endpoint of the line segment.
    * @param endX The x-coordinate of the second endpoint of the line segment.
    * @param endY The y-coordinate of the second endpoint of the line segment.
-   * @return The shortest distance between the point and the line segment.
+   * @return The shortest distance between the point and the line segment, in meters.
    */
   double pointLineSegmentDistance(double pointX, double pointY, double startX, double startY, double endX, double endY);
   /**
@@ -364,11 +393,15 @@ public:
    */
   int getLaps() const;
   /**
-   * @brief Calculates the pace difference between the current lap and the best lap in milliseconds.
+   * @brief Calculates the pace difference between the current lap and the best lap.
    *
-   * This function computes the pace for both the current lap and the best lap, and returns the difference.
-   * A positive value indicates that the current lap's pace is slower than the best lap's pace, while a negative
-   * value indicates that the current lap's pace is faster.
+   * Pace is time over distance, so the returned delta is in **milliseconds
+   * per meter** (current lap pace minus best lap pace) — multiply by the
+   * remaining lap distance for a projected time gap. A positive value means
+   * the current lap is running slower than the best lap's pace, negative
+   * means faster. Returns 0 until both laps have distance recorded.
+   *
+   * @return Pace delta in milliseconds per meter.
    */
   float getPaceDifference() const;
   /**
@@ -460,6 +493,19 @@ public:
    * @return True if both sector 2 and sector 3 lines are configured, false otherwise.
    */
   bool areSectorLinesConfigured() const;
+  /**
+   * @brief Number of crossing-zone exits whose interpolation was rejected.
+   *
+   * A rejection means the GPS data inside the zone never produced a usable
+   * straddling pair (no side change, pair too far from the line, incoherent
+   * timestamps, or crossing landing off the line segment). A steadily
+   * climbing count with a non-incrementing lap counter is the signature of
+   * a misplaced line or an unsuitable GPS setup — previously this failure
+   * was visible only on debug serial.
+   *
+   * @return Count of rejected crossings since construction or reset().
+   */
+  unsigned int getRejectedCrossingCount() const;
   /**
    * @brief Checks if the start/finish line is configured.
    *
@@ -681,6 +727,9 @@ private:
 
   // Consecutive fixes rejected for jumping > GPS_MAX_PLAUSIBLE_JUMP_METERS
   int consecutiveJumpCount = 0;
+
+  // Zone exits whose crossing interpolation was rejected (see getter docs)
+  unsigned int rejectedCrossingCount = 0;
 
   // Earth's radius in meters
   static constexpr double radiusEarth = 6371.0 * 1000;

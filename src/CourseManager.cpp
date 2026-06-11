@@ -65,6 +65,21 @@ void CourseManager::_initCourses(TrackConfig& config) {
     _courseTimers[i].lengthFt = 0;
   }
 
+  // Distance failsafe: detection should resolve within a few laps of the
+  // longest layout; past that, surface the Lap Anything timer instead of
+  // hanging in WAYPOINT_SET forever.
+  float longestCourseMeters = 0;
+  for (int i = 0; i < _courseCount; i++) {
+    float courseMeters = _courseTimers[i].lengthFt / METERS_TO_FEET;
+    if (courseMeters > longestCourseMeters) {
+      longestCourseMeters = courseMeters;
+    }
+  }
+  _fallbackDistanceMeters = COURSE_DETECT_FALLBACK_DISTANCE_FACTOR * longestCourseMeters;
+  if (_fallbackDistanceMeters < COURSE_DETECT_FALLBACK_MIN_METERS) {
+    _fallbackDistanceMeters = COURSE_DETECT_FALLBACK_MIN_METERS;
+  }
+
   // Create the detector with course names and lengths
   if (_courseCount > 0) {
     CourseInfo courseInfos[MAX_COURSES];
@@ -107,7 +122,7 @@ int CourseManager::loop(double lat, double lng, float altMeters, float speedKnot
 
   // Feed the detector
   if (!_detectionComplete && _courseCount > 0) {
-    float speedKmh = speedKnots * 1.852;
+    float speedKmh = speedKnots * GEOMATH_KNOTS_TO_KMH;
 
     // Get odometer from first active timer
     float odometer = 0;
@@ -123,6 +138,20 @@ int CourseManager::loop(double lat, double lng, float altMeters, float speedKnot
     // Handle candidates_ready state
     if (_detector.getState() == DETECT_STATE_CANDIDATES_READY) {
       _handleCandidatesReady(odometer);
+    }
+
+    // Fallback paths the rejection counter can't reach: the detector only
+    // produces candidates when a lap length matches within tolerance, so a
+    // wrong/missing config used to leave detection (and getActiveTimer())
+    // hung forever while the WaypointLapTimer silently timed laps unseen.
+    if (!_detectionComplete) {
+      if (_detector.getNoMatchCount() >= COURSE_DETECT_MAX_NO_MATCH_PASSES) {
+        debugln(F("No course length matched after max passes - activating Lap Anything"));
+        _activateLapAnything();
+      } else if (odometer > _fallbackDistanceMeters) {
+        debugln(F("Detection distance failsafe reached - activating Lap Anything"));
+        _activateLapAnything();
+      }
     }
   }
 
@@ -167,6 +196,13 @@ void CourseManager::_handleCandidatesReady(float currentOdometer) {
 void CourseManager::_activateLapAnything() {
   _lapAnythingActive = true;
   _detectionComplete = true;
+  // No course timer will ever be surfaced in this mode — stop feeding all
+  // of them. Without this, every fix kept running up to MAX_COURSES full
+  // crossing pipelines forever (and pruneInactiveCourses() couldn't help:
+  // it early-returns when no course is active, which is exactly this state).
+  for (int i = 0; i < _courseCount; i++) {
+    _courseTimers[i].active = false;
+  }
 }
 
 void CourseManager::pruneInactiveCourses() {
@@ -221,6 +257,11 @@ int CourseManager::getCourseCount() const {
 
 int CourseManager::getDetectionRejectionCount() const {
   return _detectionRejectionCount;
+}
+
+bool CourseManager::isCourseTimerActive(int index) const {
+  if (index < 0 || index >= _courseCount) return false;
+  return _courseTimers[index].active;
 }
 
 DovesLapTimer* CourseManager::getActiveTimer() {

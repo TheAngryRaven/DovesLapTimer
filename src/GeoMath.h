@@ -24,6 +24,17 @@
 
 static const double GEOMATH_RADIUS_EARTH = 6371.0 * 1000; // meters
 
+// Unit conversion constants — the single source of truth for the unit
+// boundaries the public API spans (knots from NMEA, km/h internally, mph
+// for the US-facing speed gates, feet for course lengths). One nautical
+// mile is exactly 1852 m and one statute mile exactly 1609.344 m, so the
+// derived factors below stay mutually consistent (previously three
+// hand-typed literals disagreed at the 7th digit).
+static constexpr double GEOMATH_KNOTS_TO_KMH  = 1.852;
+static constexpr double GEOMATH_MPH_TO_KMH    = 1.609344;
+static constexpr double GEOMATH_KMH_TO_MPH    = 1.0 / GEOMATH_MPH_TO_KMH;
+static constexpr double GEOMATH_METERS_TO_FEET = 1.0 / 0.3048; // 1 ft = 0.3048 m exactly
+
 /**
  * @brief Checks a value is a real, finite number (not NaN, not +/-infinity).
  *

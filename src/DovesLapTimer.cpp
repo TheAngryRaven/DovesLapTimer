@@ -73,7 +73,7 @@ int DovesLapTimer::loop(double currentLat, double currentLng, float currentAltit
   positionPrevAlt = currentAltitudeMeters;
 
   // update current speed
-  currentSpeedkmh = currentSpeedKnots * 1.852;
+  currentSpeedkmh = currentSpeedKnots * GEOMATH_KNOTS_TO_KMH;
 
   // run calculations for each crossing-line
   // Only one line can be "crossing" at a time due to shared buffer.
@@ -218,6 +218,18 @@ LineDetectResult DovesLapTimer::_detectLineCrossing(
       debugln(F(" crossed, calculating..."));
       crossingFlag = false;
 
+      // Include the exiting fix itself: at low GPS rates (1-5 Hz) the line
+      // is often crossed between the last in-zone fix and this one, and
+      // without it the buffer holds no straddling pair at all. At high
+      // rates it sits beyond the (earlier) genuine pair and is ignored.
+      crossingPointBuffer[crossingPointBufferIndex].lat = currentLat;
+      crossingPointBuffer[crossingPointBufferIndex].lng = currentLng;
+      crossingPointBuffer[crossingPointBufferIndex].time = millisecondsSinceMidnight;
+      crossingPointBuffer[crossingPointBufferIndex].odometer = totalDistanceTraveled;
+      crossingPointBuffer[crossingPointBufferIndex].speedKmh = currentSpeedkmh;
+      crossingPointBufferIndex = (crossingPointBufferIndex + 1) % crossingPointBufferSize;
+      if (crossingPointBufferIndex == 0) crossingPointBufferFull = true;
+
       outLat = 0.0; outLng = 0.0; outOdometer = 0.0; outTime = 0;
       bool validCrossing = interpolateCrossingPoint(outLat, outLng, outTime, outOdometer,
                                                     pointALat, pointALng, pointBLat, pointBLng);
@@ -227,6 +239,11 @@ LineDetectResult DovesLapTimer::_detectLineCrossing(
         debug(F("  crossingLng: "));  debugln(outLng, 6);
         debug(F("  crossingOdometer: ")); debugln(outOdometer);
         debug(F("  crossingTime: ")); debugln(outTime);
+      } else {
+        // Surface the failure — debug serial is usually not connected on
+        // track, and a silently swallowed crossing looks like a dead lap
+        // counter to the user.
+        rejectedCrossingCount++;
       }
 
       crossingPointBufferIndex = 0;
@@ -493,10 +510,32 @@ bool DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
   debug(F("crossingSumDistances: "));
   debugln(crossingSumDistances);
 
-  // Validate: the crossing pair must exist and be close enough to the line
-  if (crossingSumDistances < crossingThresholdMeters && crossingIndexA != -1 && crossingIndexB != -1) {
+  if (crossingIndexA == -1 || crossingIndexB == -1) {
+    debugln(F("~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~"));
+    return false;
+  }
+
+  {
     const crossingPointBufferEntry& entryA = entryAt(crossingIndexA);
     const crossingPointBufferEntry& entryB = entryAt(crossingIndexB);
+
+    // Validate: the crossing pair must hug the line *relative to the GPS
+    // sample spacing*, not in absolute meters. The old absolute check
+    // (sum < crossingThresholdMeters) conflated zone size with sample
+    // density: at 1 Hz / 70 km/h consecutive fixes are ~19 m apart, every
+    // genuine crossing failed the 7 m bound, and the lap counter silently
+    // never incremented. For a pair genuinely straddling the line, the sum
+    // of the two distances can never exceed the pair's own spacing, so a
+    // spacing-scaled bound stays tight at any sample rate.
+    double pairSpacing = haversine(entryA.lat, entryA.lng, entryB.lat, entryB.lng);
+    double allowedSum = CROSSING_PAIR_SPACING_FACTOR * pairSpacing;
+    if (allowedSum < crossingThresholdMeters) {
+      allowedSum = crossingThresholdMeters;
+    }
+    if (crossingSumDistances > allowedSum) {
+      debugln(F("~~~ INVALID CROSSING: pair too far from line ~~~"));
+      return false;
+    }
 
     // Time deltas are computed in double, normalized across the UTC midnight
     // wrap, and sanity-clamped BEFORE any conversion back to unsigned long —
@@ -512,12 +551,24 @@ bool DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
       return false;
     }
 
-    debugln(F("~~~ VALID CROSSING ~~~"));
-
     // Compute the interpolation factor (t) from distances and speeds at the crossing pair
     double distA = pointLineSegmentDistance(entryA.lat, entryA.lng, pointALat, pointALng, pointBLat, pointBLng);
     double distB = pointLineSegmentDistance(entryB.lat, entryB.lng, pointALat, pointALng, pointBLat, pointBLng);
     double t = interpolateWeight(distA, distB, entryA.speedKmh, entryB.speedKmh);
+
+    // Geometric sanity: the interpolated point must land on the crossing
+    // line *segment* (within the threshold), not on its infinite extension
+    // — pointOnSideOfLine treats the line as infinite, so a pair straddling
+    // the extension beyond an endpoint would otherwise slip through now
+    // that the sum bound scales with fix spacing.
+    double linearLat = entryA.lat + t * (entryB.lat - entryA.lat);
+    double linearLng = entryA.lng + t * (entryB.lng - entryA.lng);
+    if (pointLineSegmentDistance(linearLat, linearLng, pointALat, pointALng, pointBLat, pointBLng) > crossingThresholdMeters) {
+      debugln(F("~~~ INVALID CROSSING: crossing point off the line segment ~~~"));
+      return false;
+    }
+
+    debugln(F("~~~ VALID CROSSING ~~~"));
 
     // Time and odometer are always interpolated linearly (monotonic values that
     // should not overshoot), regardless of the interpolation mode for position.
@@ -530,12 +581,8 @@ bool DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
     crossingTime = (unsigned long)crossingTimeMs;
 
     if (forceLinear) {
-      // Linear interpolation for position
-      double deltaLat = entryB.lat - entryA.lat;
-      double deltaLon = entryB.lng - entryA.lng;
-
-      crossingLat = entryA.lat + t * deltaLat;
-      crossingLng = entryA.lng + t * deltaLon;
+      crossingLat = linearLat;
+      crossingLng = linearLng;
     } else {
       // Catmull-Rom spline interpolation for position only.
       // Requires 4 control points: p0 (before A), p1 (A), p2 (B), p3 (after B)
@@ -544,12 +591,8 @@ bool DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
       if (!canUseCatmullRom) {
         // Not enough points for Catmull-Rom, fall back to linear
         debugln(F("Catmull-Rom: insufficient control points, using linear fallback"));
-
-        double deltaLat = entryB.lat - entryA.lat;
-        double deltaLon = entryB.lng - entryA.lng;
-
-        crossingLat = entryA.lat + t * deltaLat;
-        crossingLng = entryA.lng + t * deltaLon;
+        crossingLat = linearLat;
+        crossingLng = linearLng;
       } else {
         // We have 4 valid control points for Catmull-Rom
         int index0 = crossingIndexA - 1;
@@ -574,9 +617,6 @@ bool DovesLapTimer::interpolateCrossingPoint(double& crossingLat, double& crossi
     }
     return true;
   }
-
-  debugln(F("~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~ INVALID CROSSING ~~~"));
-  return false;
 }
 
 /////////// direction detection
@@ -796,6 +836,7 @@ void DovesLapTimer::reset() {
   positionPrevAlt = 0;
   firstPositionReceived = false;
   consecutiveJumpCount = 0;
+  rejectedCrossingCount = 0;
   prevFixLat = 0;
   prevFixLng = 0;
   prevFixTime = 0;
@@ -921,7 +962,7 @@ float DovesLapTimer::getCurrentSpeedKmh() const {
   return currentSpeedkmh;
 }
 float DovesLapTimer::getCurrentSpeedMph() const {
-  return currentSpeedkmh / 1.60934f;
+  return currentSpeedkmh * GEOMATH_KMH_TO_MPH;
 }
 
 /////////// sector timing getters
@@ -968,6 +1009,9 @@ bool DovesLapTimer::areSectorLinesConfigured() const {
 }
 bool DovesLapTimer::isStartFinishLineConfigured() const {
   return startFinishLineConfigured;
+}
+unsigned int DovesLapTimer::getRejectedCrossingCount() const {
+  return rejectedCrossingCount;
 }
 
 /////////// direction detection getters

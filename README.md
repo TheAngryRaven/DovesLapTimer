@@ -57,7 +57,7 @@ To run locally: `cd test && make run`.
 - **Automatic Course Detection** - Drive a lap at any track and the library figures out which course layout you're on by matching driven distance against known courses. No manual selection needed.
 - **Multi-Course Support** - Define up to 8 course layouts per track (different configurations, rental vs. pro layouts, etc). `CourseManager` orchestrates them all.
 - **Direction Detection** - Automatically detects whether you're driving the course forward or reverse from the temporal order of sector-line crossings within a lap window. Glitch-resistant — needs both physical sector lines crossed in a lap before resolving, so a single GPS teleport can't lock the wrong direction.
-- **"Lap Anything" Fallback** - If course detection fails after 3 attempts, falls back to `WaypointLapTimer` which drops a waypoint and uses proximity-based timing. Works on any track, anywhere - no pre-configured lines needed.
+- **"Lap Anything" Fallback** - If course detection fails (3 rejected candidate sets, 3 laps matching no configured course length, or too much distance driven without detection resolving), falls back to `WaypointLapTimer` which drops a waypoint and uses proximity-based timing. Works on any track, anywhere - no pre-configured lines needed.
 - **Configurable Thresholds** - Speed, proximity, and detection thresholds are now adjustable at runtime via setter methods.
 
 ## Supported Hardware: MCU
@@ -65,7 +65,13 @@ To run locally: `cd test && make run`.
 While this is technially an arduino library, this needs a device with a large amount of ram and processing power due to all the floating point math.
 
 - Arduino Mega+
-  - Technically appears to be working, really pushing it
+  - Compiles and counts laps, but runs **degraded**: on classic AVR `double`
+    is a 32-bit float (~7 significant digits), which quantizes real-world
+    GPS coordinates to roughly 0.2–0.75 m and makes per-fix odometer
+    increments and interpolated crossing times noticeably less accurate.
+    The compiler emits a `#warning` on these targets. `CourseManager` does
+    **not** fit in a Mega's 8 KB SRAM at all — see "Memory Usage" below.
+    Full advertised precision needs a true 64-bit-double MCU.
 - [Seed NRF52840 (Recommended)](https://www.amazon.com/Seeed-Studio-XIAO-nRF52840-Microcontroller/dp/B09T9VVQG7)
   - Has a dedicated high speed FPU for both floats and doubles
   - Fast enough to support GPS/Display/SDCard Logging
@@ -262,7 +268,7 @@ Now if you want any running information, you have the following...
   unsigned long getCurrentLapTime() const; // The current lap time in milliseconds.
   unsigned long getLastLapTime() const; // The last lap time in milliseconds.
   unsigned long getBestLapTime() const; // The best lap time in milliseconds.
-  float getPaceDifference() const; // Calculates the pace difference (in seconds...) between the current lap and the best lap.
+  float getPaceDifference() const; // Pace delta vs the best lap, in milliseconds PER METER (positive = slower than best pace).
   float getCurrentLapOdometerStart() const; // The distance traveled at the start of the current lap in meters.
   float getCurrentLapDistance() const; // The distance traveled during the current lap in meters.
   float getLastLapDistance() const; // The distance traveled during the last lap in meters.
@@ -384,8 +390,8 @@ void loop() {
   const char* getTrackName() const;     // Track long name.
   const char* getShortName() const;     // Track short name.
 
-  // Memory management
-  void pruneInactiveCourses();          // Deactivate non-detected timers to save RAM.
+  // Processing management
+  void pruneInactiveCourses();          // Stop feeding non-detected timers (saves CPU per fix; frees no RAM).
 
   // Threshold setters (adjustable at runtime)
   void setSpeedThresholdMph(float mph);           // Speed to trigger detection (default 20 mph).
@@ -441,9 +447,9 @@ If no candidates match or validation fails 3 times, `CourseManager` activates "L
 
 When sector lines are configured, the library automatically detects whether you're driving the course forward or in reverse:
 
-- After the start/finish line is first crossed, the first sector line you cross determines direction
-- Sector 2 first = **forward** (`DIR_FORWARD`)
-- Sector 3 first = **reverse** (`DIR_REVERSE`)
+- After the start/finish line is first crossed, the library collects the timestamps of the physical sector 2 and sector 3 crossings during each lap
+- At the next start/finish crossing, if **both** sector lines were crossed that lap, their temporal order resolves the direction: sector 2 before sector 3 = **forward** (`DIR_FORWARD`), sector 3 before sector 2 = **reverse** (`DIR_REVERSE`)
+- Laps where only one sector line was seen (missed zone, low GPS rate) are discarded and detection retries on the next lap; within a lap, the *latest* crossing of each sector line wins, so an early GPS-glitch phantom gets overwritten by the real crossing
 - Once resolved, direction is locked and sector lines are remapped internally so timing stays correct
 
 ```c
@@ -483,9 +489,9 @@ When sector lines are configured, the library automatically detects whether you'
 
 ## Memory Usage
 
-During course detection, the library uses up to ~24 KB of RAM (8 course timers running simultaneously). After detection completes, call `pruneInactiveCourses()` to deactivate unused timers and drop to ~5 KB.
+A `CourseManager` instance is ~29 KB on a 64-bit-double MCU, dominated by a fixed by-value array of `MAX_COURSES` (8) course timers at ~3.6 KB each. That memory is **statically allocated for all 8 slots regardless of how many courses you configure**, and it is never released: `pruneInactiveCourses()` (and the automatic deactivation when "Lap Anything" activates) stop deactivated timers from being *processed* — saving CPU per GPS fix — but free zero bytes. `CourseManager` therefore does not fit on AVR-class boards (Mega: 8 KB SRAM); it needs an MCU like the XIAO nRF52840 (256 KB).
 
-If using `DovesLapTimer` standalone (no `CourseManager`), memory usage is much lower - just the single timer instance with its crossing point buffer (100 entries on boards with >3KB RAM, 25 entries otherwise).
+If using `DovesLapTimer` standalone (no `CourseManager`), memory usage is much lower — a single timer instance is ~3.6 KB, mostly its crossing point buffer (100 entries on boards with >3KB RAM, 25 entries otherwise).
 
 ## License
 

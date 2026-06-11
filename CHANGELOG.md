@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Low-rate GPS silently killed all lap counting** — crossing validation
+  required the straddle pair's summed distance to the line to be under
+  `crossingThresholdMeters` in absolute meters, conflating zone size with
+  sample density: at 1 Hz / 70 km/h fixes are ~19 m apart, every genuine
+  crossing failed the check, and the lap counter never moved (the failure
+  went only to debug serial). Validation now scales with the pair's own
+  spacing (`CROSSING_PAIR_SPACING_FACTOR`), the zone-exiting fix is included
+  in the buffer so a straddle pair exists at low rates at all, a geometric
+  backstop requires the interpolated point to land on the line *segment*
+  (not its infinite extension), and rejected crossings are surfaced through
+  the new `getRejectedCrossingCount()` getter.
+- **Lap-Anything fallback was unreachable from the most likely failure
+  mode** — the fallback only fired after candidate *rejections*, but a
+  wrong/missing course config never produces candidates, leaving detection
+  (and `getActiveTimer()`) hung forever while the WaypointLapTimer silently
+  timed laps unseen. `CourseDetector` now counts completed no-match passes
+  (`getNoMatchCount()`), and `CourseManager` falls back after
+  `COURSE_DETECT_MAX_NO_MATCH_PASSES` of them — plus a distance failsafe
+  (`COURSE_DETECT_FALLBACK_DISTANCE_FACTOR` × longest course, floored at
+  `COURSE_DETECT_FALLBACK_MIN_METERS`) for the case where the waypoint is
+  never revisited at all.
+- **Lap-Anything mode left all 8 course timers running forever** —
+  `_activateLapAnything()` now deactivates every course entry, so the
+  full crossing pipelines stop being fed on every fix once the fallback is
+  active (previously `pruneInactiveCourses()` couldn't help: it
+  early-returns precisely in that no-active-course state).
+- **README "Direction Detection" described the algorithm removed in
+  2026-05-20** ("first sector line crossed determines direction"); rewritten
+  to match the actual both-sectors temporal-order resolution. Two unit lies
+  fixed with it: `getPaceDifference()` returns **ms per meter** (README said
+  "seconds", the header said "milliseconds"), and `pointLineSegmentDistance()`
+  returns **meters** (header claimed degrees). A doc-claim spot check was
+  added to the release checklist in `CONTRIBUTING.md`.
+- **Test Makefile tracked no header dependencies** — `make run` gave false
+  greens on binaries stale against `../src/*.h`, `replay_runner.h`, or the
+  NMEA fixtures (`touch ../src/DovesLapTimer.h && make` → "Nothing to be
+  done"). All headers are now prerequisites of every test binary.
+- **`M_PI`/unit-conversion literal drift** — speed/distance conversions used
+  three different hand-typed literals across five files (`1.852`,
+  `0.621371`, `1.60934` — the latter two disagree at the 7th digit). All
+  conversions now use shared `constexpr` constants in `GeoMath.h`
+  (`GEOMATH_KNOTS_TO_KMH`, `GEOMATH_KMH_TO_MPH`, `GEOMATH_MPH_TO_KMH`,
+  `GEOMATH_METERS_TO_FEET`), derived from the exact definitions of the
+  nautical and statute mile.
 - **UTC midnight rollover corrupted every time computation** — the GPS time
   base (ms since midnight) wraps 86,399,999 → 0 at UTC midnight, and every
   duration was a naked unsigned subtraction. A lap (or sector, or current-lap
@@ -44,7 +88,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stricter standard libraries (under `-std=c++NN` / `__STRICT_ANSI__`) hide
   it, breaking the host test build with `'M_PI' was not declared in this scope`.
 
+### Changed
+- **AVR (Mega/Uno) support is now documented as degraded** — on classic AVR
+  `double` is a 32-bit float, which quantizes GPS coordinates to ~0.2–0.75 m
+  and degrades odometer/interpolation accuracy; lap counting still works. A
+  compile-time `#warning` now fires on 4-byte-double targets and the README
+  hardware section spells out the limitation.
+- **Memory documentation corrected** — `pruneInactiveCourses()` saves CPU,
+  not RAM: the 8-slot course-timer array (~29 KB with 64-bit doubles) is
+  statically allocated regardless of course count and never released. The
+  README and CLAUDE.md no longer claim it "drops to ~5 KB", and now state
+  plainly that `CourseManager` does not fit on AVR Mega.
+- **Coverage gate raised from 1% to 80%** (measured line coverage is 84.5%
+  after the new suites) so deleting behavioral tests actually fails CI.
+- **CI supply-chain hardening** — every workflow action is pinned to a
+  verified commit SHA (and `peaceiris/actions-gh-pages` bumped v3 → v4),
+  `.github/dependabot.yml` keeps the pins monitored weekly, and the
+  gh-pages/badge deploy steps now require `github.ref == refs/heads/master`
+  so a `workflow_dispatch` from a feature branch can no longer overwrite
+  production docs or the coverage badge.
+
 ### Added
+- **`test_course_manager.cpp` and `test_waypoint_lap_timer.cpp`** — the two
+  largest v4.0 modules previously had zero direct tests. Now covered:
+  detection accept via `raceStarted` validation, reject → fallback (issue
+  #13 exercised through `CourseManager` where it manifested), no-match →
+  fallback, distance failsafe, Lap-Anything timer deactivation, prune
+  behavior, waypoint lap accounting, and reset semantics. Plus
+  `test_low_rate_gps.cpp` for 1 Hz / 5 Hz crossing detection and the
+  rejected-crossing counter. Line coverage: ~51% → 84.5%.
+- **`getRejectedCrossingCount()`** on `DovesLapTimer`,
+  **`getNoMatchCount()`** on `CourseDetector`, and
+  **`isCourseTimerActive(index)`** on `CourseManager`.
 
 - **GPS input validation** — `DovesLapTimer::loop()`, `WaypointLapTimer::loop()`
   and `CourseDetector::update()` now reject NaN/Inf, out-of-range, and exact
@@ -65,6 +140,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   forms (bug report + feature request) and a pull-request template.
 - **`getCurrentSpeedKmh()` and `getCurrentSpeedMph()`** getters to
   `DovesLapTimer.h`, `DovesLapTimer.cpp`, `WaypointLapTimer.h` and `WaypointLapTimer.cpp`
+
+### Removed
+- **`WaypointLapTimer`'s 50-entry proximity buffer** (and the
+  `ProximityBufferEntry` struct + `WAYPOINT_LAP_BUFFER_SIZE` constant) —
+  1.6 KB of SRAM per instance that was written on every in-proximity fix
+  and never read; the closest-approach lap split only ever used three
+  scalars. `WaypointLapTimer` shrinks from ~1.8 KB to ~150 B.
 
 ## [4.1.0] – 2026-05-21
 
