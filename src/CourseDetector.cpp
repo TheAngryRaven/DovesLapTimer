@@ -31,6 +31,12 @@ void CourseDetector::reset() {
 }
 
 void CourseDetector::update(double lat, double lng, float speedKmh, float totalOdometer) {
+  // Reject invalid input — a NaN waypoint would make every subsequent
+  // proximity comparison false and silently hang detection forever.
+  if (!geoCoordinatesValid(lat, lng) || !geoIsFinite(speedKmh) || !geoIsFinite(totalOdometer)) {
+    return;
+  }
+
   if (_state == DETECT_STATE_IDLE) {
     _state = DETECT_STATE_WAITING_FOR_SPEED;
   }
@@ -66,6 +72,13 @@ void CourseDetector::_checkWaypointProximity(double lat, double lng, float total
 
   if (distToWaypoint < _detectionProximityMeters) {
     _matchCourseRanked(distanceSinceWaypoint);
+    if (_state == DETECT_STATE_WAYPOINT_SET) {
+      // No candidate matched this lap. Re-anchor the lap-window origin to
+      // "now" — otherwise distanceSinceWaypoint keeps accumulating across
+      // laps and a second pass would falsely match a longer layout (same
+      // root cause as the rejection-cooldown bug, CLAUDE.md issue #13).
+      _waypointOdometer = totalOdometer;
+    }
   }
 }
 
@@ -100,7 +113,8 @@ void CourseDetector::_matchCourseRanked(float distanceMeters) {
     }
     _state = DETECT_STATE_CANDIDATES_READY;
   }
-  // If no candidates within tolerance, stay in waypoint_set and try again next pass
+  // If no candidates within tolerance, stay in waypoint_set; the caller
+  // re-anchors the lap window so the next pass measures a fresh lap.
 }
 
 void CourseDetector::acceptCandidate(int index) {

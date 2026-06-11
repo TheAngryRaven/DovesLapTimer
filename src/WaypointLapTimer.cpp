@@ -27,6 +27,7 @@ void WaypointLapTimer::_resetState() {
   _positionPrevLat = 0;
   _positionPrevLng = 0;
   _firstPositionReceived = false;
+  _consecutiveJumpCount = 0;
   _currentSpeedKmh = 0;
   // _speedThresholdMph and _proximityMeters are NOT reset here —
   // they are set once in the constructor and preserved through reset()
@@ -52,10 +53,31 @@ void WaypointLapTimer::updateCurrentTime(unsigned long currentTimeMilliseconds) 
 }
 
 int WaypointLapTimer::loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots) {
+  (void)currentAltitudeMeters;  // accepted for API parity with DovesLapTimer; 2D odometer only
+
+  // Reject invalid fixes — a NaN/(0,0) fix would poison the odometer and a
+  // NaN waypoint would never trigger proximity again (see DovesLapTimer::loop).
+  if (!geoCoordinatesValid(currentLat, currentLng)) {
+    return -1;
+  }
+  if (!geoIsFinite(currentSpeedKnots) || currentSpeedKnots < 0) {
+    currentSpeedKnots = 0;
+  }
+
   // Update odometer
   if (_firstPositionReceived) {
     double dist = geoHaversine(_positionPrevLat, _positionPrevLng, currentLat, currentLng);
-    _totalDistanceTraveled += dist;
+    if (dist > GPS_MAX_PLAUSIBLE_JUMP_METERS) {
+      _consecutiveJumpCount++;
+      if (_consecutiveJumpCount < GPS_JUMP_REACCEPT_COUNT) {
+        return -1;  // teleport glitch — drop the fix
+      }
+      // Sustained relocation: re-seed position, don't credit the gap.
+      _consecutiveJumpCount = 0;
+    } else {
+      _consecutiveJumpCount = 0;
+      _totalDistanceTraveled += dist;
+    }
   } else {
     _firstPositionReceived = true;
   }
@@ -178,7 +200,7 @@ void WaypointLapTimer::_processProximityBuffer() {
 
   if (_raceStarted) {
     _laps++;
-    unsigned long lapTime = crossingTime - _currentLapStartTime;
+    unsigned long lapTime = timeSinceMidnightDelta(_currentLapStartTime, crossingTime);
     float lapDistance = crossingOdometer - _currentLapOdometerStart;
 
     _lastLapTime = lapTime;
@@ -199,7 +221,7 @@ void WaypointLapTimer::_processProximityBuffer() {
   } else {
     _raceStarted = true;
     _laps++;
-    unsigned long lapTime = crossingTime - _currentLapStartTime;
+    unsigned long lapTime = timeSinceMidnightDelta(_currentLapStartTime, crossingTime);
     float lapDistance = crossingOdometer - _currentLapOdometerStart;
 
     _lastLapTime = lapTime;
@@ -236,9 +258,9 @@ int WaypointLapTimer::getLaps() const {
 }
 
 unsigned long WaypointLapTimer::getCurrentLapTime() const {
-  return (_currentLapStartTime <= 0 || !_raceStarted)
-    ? 0
-    : _millisecondsSinceMidnight - _currentLapStartTime;
+  return _raceStarted
+    ? timeSinceMidnightDelta(_currentLapStartTime, _millisecondsSinceMidnight)
+    : 0;
 }
 
 unsigned long WaypointLapTimer::getLastLapTime() const {

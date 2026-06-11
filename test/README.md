@@ -12,8 +12,11 @@ DovesLapTimer. Compiles and runs on Linux / macOS with `g++` or `clang++`
 |---|---|---|
 | `test_geomath` | `GeoMath.h` | haversine + haversine3D sanity, real distances |
 | `test_direction_detector` | `DirectionDetector` in `DovesLapTimer.h/cpp` | resolution outcomes, single-sector discard, glitch overwrite (CLAUDE.md issues #11 / #12), post-resolution lock |
-| `test_course_detector` | `CourseDetector.h/cpp` | full state machine + rejection cooldown (CLAUDE.md issue #13) |
+| `test_course_detector` | `CourseDetector.h/cpp` | full state machine + rejection cooldown (CLAUDE.md issue #13) + no-match lap-window re-anchor (issue #16) |
 | `test_synthetic_track` | full `DovesLapTimer` pipeline | drives a deterministic 100m × 100m CCW square loop, asserts lap / sector times + cross-lap consistency + direction resolution |
+| `test_midnight_rollover` | time-base handling | lap / sector / crossing-zone timing across the UTC midnight wrap, `timeSinceMidnightDelta` (CLAUDE.md issue #15) |
+| `test_input_validation` | GPS input guards | NaN/Inf/(0,0)/out-of-range rejection, teleport drop + relocation re-seed, unconfigured / degenerate line safety (issues #14 / #17) |
+| `test_buffer_wraparound` | crossing-buffer ring | parked-in-zone wraparound: park-cross-park and standing-start scenarios (issue #18) |
 
 ### Layer 3 — NMEA replay regression
 

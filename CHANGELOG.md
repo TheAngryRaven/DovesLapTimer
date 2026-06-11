@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **UTC midnight rollover corrupted every time computation** — the GPS time
+  base (ms since midnight) wraps 86,399,999 → 0 at UTC midnight, and every
+  duration was a naked unsigned subtraction. A lap (or sector, or current-lap
+  display) straddling midnight produced a ~4.29-billion-ms time that stuck as
+  `bestLapTime`; a crossing zone straddling midnight pushed an out-of-range
+  double through a double→unsigned conversion (undefined behavior). All
+  duration sites in `DovesLapTimer` and `WaypointLapTimer` now normalize via
+  a shared `timeSinceMidnightDelta()` helper, the crossing interpolator
+  computes its delta in `double` with wrap normalization and a 10s coherence
+  clamp (`CROSSING_MAX_FIX_GAP_MS`), and a legitimate crossing at exactly
+  00:00:00.000 is no longer discarded by the old `time != 0` validity sentinel.
+- **Uninitialized start/finish line read by `loop()`** — the four
+  `startFinishPoint*` doubles had no initializers and no configured guard, so
+  calling `loop()` before `setStartFinishLine()` fed indeterminate memory into
+  `haversine()` (undefined behavior, potential phantom crossings). All line
+  members are now zero-initialized and `loop()` skips start/finish detection
+  until a valid line is set. Line setters also reject degenerate (zero-length,
+  e.g. the example sketch's `0.00` placeholders) or non-finite lines.
+- **Crossing-buffer wraparound corrupted the interpolator** — a kart parked
+  inside the crossing zone (standing start on the grid, red flag, stop-and-go)
+  wraps the 100-entry ring in ~4-5.5s at 18-25Hz, after which physical index
+  order no longer matched chronological order: the seam pair (newest entry
+  adjacent to oldest) could masquerade as the line crossing, fabricating a
+  crossing from points minutes apart or invalidating the real one. The
+  interpolator now unwinds the ring chronologically before scanning.
+- **Course detection could falsely match a longer layout** — a completed
+  proximity pass that matched no course left the lap-distance window
+  accumulating, so a driver lapping a course missing from config would match
+  a 2x-length layout with cumulative distance on the next pass. The window
+  now re-anchors after every completed pass, match or not (same root cause
+  as the v4.1.0 rejection-cooldown fix).
 - **`M_PI` portability** — `GeoMath.h` now provides a fallback `#define M_PI`
   when the platform's `<math.h>` doesn't expose it. `M_PI` is a POSIX/BSD
   extension, not standard C/C++; glibc happens to expose it by default but
@@ -15,6 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **GPS input validation** — `DovesLapTimer::loop()`, `WaypointLapTimer::loop()`
+  and `CourseDetector::update()` now reject NaN/Inf, out-of-range, and exact
+  (0,0) "null island" fixes (routine parser output during fix loss) that
+  previously poisoned odometers permanently and silently hung course
+  detection. Non-finite speed/altitude values are sanitized rather than the
+  whole fix being dropped. Single-fix teleports beyond
+  `GPS_MAX_PLAUSIBLE_JUMP_METERS` (500m) are dropped; after
+  `GPS_JUMP_REACCEPT_COUNT` (3) consecutive far fixes the new position is
+  accepted as a genuine relocation and re-seeded without crediting the gap
+  to the odometer.
+- **`isStartFinishLineConfigured()`** getter on `DovesLapTimer`.
+- 23 new host unit tests across three new suites (midnight rollover,
+  adversarial GPS input, crossing-buffer wraparound) plus course-detection
+  window re-anchor regression tests.
 - Project governance docs: `CONTRIBUTING.md` (dev setup, the 3-layer testing
   philosophy, PR workflow, release process), `SECURITY.md`, GitHub issue
   forms (bug report + feature request) and a pull-request template.

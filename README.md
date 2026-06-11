@@ -183,7 +183,8 @@ The code should have clarifying comments wherever there are any unclear bits.
 #### Setup()
 
 ```c
-  // define start/finish line
+  // define start/finish line (required — loop() does no start/finish
+  // detection until a valid, non-zero-length line has been set)
   lapTimer.setStartFinishLine(crossingPointALat, crossingPointALng, crossingPointBLat, crossingPointBLng);
 
   // OPTIONAL: define sector lines for split timing
@@ -222,6 +223,14 @@ All of the lap timing magic is happening inside of `checkStartFinish` consider t
   }
 ```
 
+> **Input robustness:** `loop()` validates every fix before it touches timing
+> state — NaN/Inf, out-of-range, and exact (0,0) coordinates are rejected, and
+> single-fix teleports (>500m between consecutive fixes) are dropped as
+> glitches (a sustained relocation is re-accepted after 3 consecutive fixes).
+> Lap, sector, and current-lap times are also normalized across the UTC
+> midnight rollover of the GPS time-of-day, so sessions running through
+> midnight UTC time correctly.
+
 Here is an example `getGpsTimeInMilliseconds()`
 
 ```c
@@ -246,6 +255,7 @@ Now if you want any running information, you have the following...
 
 ```c
   // Basic lap timing
+  bool isStartFinishLineConfigured() const; // True once a valid start/finish line is set.
   bool getRaceStarted() const; // True if the race has started, false otherwise (passed the line one time).
   bool getCrossing() const; // True if crossing the start/finish line, false otherwise.
   unsigned long getCurrentLapStartTime() const; // The current lap start time in milliseconds.
