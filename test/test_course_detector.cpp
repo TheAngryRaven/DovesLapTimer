@@ -184,6 +184,58 @@ void test_rejection_imposes_cooldown_until_another_full_lap() {
 }
 
 // =============================================================================
+// No-match re-anchor (CLAUDE.md review issue C3)
+//
+// A completed proximity pass that matches nothing must re-anchor the
+// lap-window origin to "now". Otherwise distanceSinceWaypoint keeps
+// accumulating across laps: a driver lapping a 1000ft course missing from
+// config would, on the second pass, falsely match a 2000ft layout with the
+// cumulative distance. Same root-cause class as the rejection-cooldown
+// bug above.
+// =============================================================================
+
+void test_no_match_reanchors_lap_window() {
+  // Only a 2000ft (~610m) course is configured; driver laps ~1000ft (305m).
+  CourseInfo courses[] = {{"Long Course", 2000.0f}};
+  CourseDetector det;
+  det.init(courses, 1);
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 100.0f);
+
+  // Lap 1: 305m driven, back at waypoint — 1000ft vs 2000ft, no match
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 405.0f);
+  EXPECT_EQ(det.getState(), DETECT_STATE_WAYPOINT_SET);
+  EXPECT_EQ(det.getRankedMatchCount(), 0);
+
+  // Lap 2: another 305m. Without the re-anchor the cumulative 610m
+  // (~2000ft) would falsely match the longer layout.
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 710.0f);
+  EXPECT_EQ(det.getState(), DETECT_STATE_WAYPOINT_SET);
+  EXPECT_EQ(det.getRankedMatchCount(), 0);
+
+  // Lap 3 the same — distance never accumulates into a false positive
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 1015.0f);
+  EXPECT_EQ(det.getState(), DETECT_STATE_WAYPOINT_SET);
+  EXPECT_EQ(det.getRankedMatchCount(), 0);
+}
+
+void test_match_still_works_after_no_match_reanchor() {
+  CourseInfo courses[] = {{"Long Course", 2000.0f}};
+  CourseDetector det;
+  det.init(courses, 1);
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 100.0f);
+
+  // Short pass: no match, window re-anchors to odometer 405
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 405.0f);
+  EXPECT_EQ(det.getRankedMatchCount(), 0);
+
+  // Genuine 610m (~2000ft) lap measured from the re-anchor point matches
+  det.update(WAYPOINT_LAT, WAYPOINT_LNG, SPEED_FAST_KMH, 1015.0f);
+  EXPECT_EQ(det.getState(), DETECT_STATE_CANDIDATES_READY);
+  EXPECT_EQ(det.getRankedMatchCount(), 1);
+  EXPECT_EQ(det.getRankedMatches()[0].index, 0);
+}
+
+// =============================================================================
 // reset() restores initial state
 // =============================================================================
 
@@ -218,6 +270,9 @@ int main() {
 
   RUN_TEST(accept_candidate_moves_to_detected);
   RUN_TEST(rejection_imposes_cooldown_until_another_full_lap);
+
+  RUN_TEST(no_match_reanchors_lap_window);
+  RUN_TEST(match_still_works_after_no_match_reanchor);
 
   RUN_TEST(reset_restores_initial_state);
 

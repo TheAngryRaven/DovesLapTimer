@@ -116,6 +116,7 @@ private:
   double _positionPrevLat;
   double _positionPrevLng;
   bool _firstPositionReceived;
+  int _consecutiveJumpCount;
   float _currentSpeedKmh;
   float _speedThresholdMph;
   float _proximityMeters;

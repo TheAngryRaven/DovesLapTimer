@@ -44,9 +44,42 @@ using TRITYPE = double;
 // Maximum courses supported
 #define MAX_COURSES  8
 
+// GPS time base: milliseconds since UTC midnight, wraps 86,399,999 -> 0
+#define DOVES_MILLIS_PER_DAY  86400000UL
+
+// GPS input validation: a single-fix jump beyond this is treated as a glitch
+// and dropped; after GPS_JUMP_REACCEPT_COUNT consecutive far fixes the new
+// position is accepted as real (signal re-acquisition) and the position is
+// re-seeded without crediting the gap to the odometer.
+#define GPS_MAX_PLAUSIBLE_JUMP_METERS  500.0
+#define GPS_JUMP_REACCEPT_COUNT  3
+
+// Max believable gap between the two consecutive buffered fixes that straddle
+// a crossing line. A larger gap means the GPS time base stepped (e.g. u-blox
+// re-acquisition) and the pair cannot be interpolated coherently.
+#define CROSSING_MAX_FIX_GAP_MS  10000UL
+
+/**
+ * @brief Elapsed milliseconds between two milliseconds-since-midnight timestamps.
+ *
+ * Normalizes across the UTC midnight wrap (86,399,999 -> 0), which happens
+ * mid-evening across the Americas. Without this, a lap straddling midnight
+ * underflows unsigned subtraction into a ~4.29-billion-ms "lap time".
+ *
+ * @param startMs Earlier timestamp, in ms since midnight.
+ * @param endMs Later timestamp, in ms since midnight.
+ * @return Elapsed time in ms, wrap-normalized.
+ */
+static inline unsigned long timeSinceMidnightDelta(unsigned long startMs, unsigned long endMs) {
+  if (endMs < startMs) {
+    endMs += DOVES_MILLIS_PER_DAY;
+  }
+  return endMs - startMs;
+}
+
 // Outcome of a single _detectLineCrossing pass.
 enum LineDetectResult {
-  LINE_DETECT_NONE,         // not in / near the crossing zone
+  LINE_DETECT_NONE,         // not in / near the zone, or exited with an invalid interpolation
   LINE_DETECT_IN_ZONE,      // inside the zone (entered this fix or continuing)
   LINE_DETECT_COMPLETED,    // exited the zone this fix — interpolated outputs valid
 };
@@ -427,6 +460,15 @@ public:
    * @return True if both sector 2 and sector 3 lines are configured, false otherwise.
    */
   bool areSectorLinesConfigured() const;
+  /**
+   * @brief Checks if the start/finish line is configured.
+   *
+   * Until setStartFinishLine() has been called with a valid (non-degenerate,
+   * finite) line, loop() performs no start/finish crossing detection.
+   *
+   * @return True if a valid start/finish line has been set, false otherwise.
+   */
+  bool isStartFinishLineConfigured() const;
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Direction detection methods
@@ -544,9 +586,10 @@ private:
   /**
    * @brief Calculates the crossing point's latitude, longitude, and time based on the buffer points and the line defined by two points.
    *
-   * This function iterates through the buffer of GPS points and finds the best pair of consecutive points
-   * with the smallest sum of distances to the line defined by two points (pointALat, pointALng) and (pointBLat, pointBLng).
-   * It then interpolates the crossing point's latitude, longitude, and time using these best pair of points.
+   * This function walks the buffered GPS points in chronological order (unwinding the
+   * circular buffer if it wrapped) and finds the first pair of consecutive points on
+   * opposite sides of the line defined by (pointALat, pointALng) and (pointBLat, pointBLng).
+   * It then interpolates the crossing point's latitude, longitude, and time using that pair.
    *
    * @param crossingLat Reference to the variable that will store the crossing point's latitude.
    * @param crossingLng Reference to the variable that will store the crossing point's longitude.
@@ -556,8 +599,9 @@ private:
    * @param pointALng Longitude of the first point of the line in decimal degrees.
    * @param pointBLat Latitude of the second point of the line in decimal degrees.
    * @param pointBLng Longitude of the second point of the line in decimal degrees.
+   * @return True if a valid crossing was found and the out-params are populated.
    */
-  void interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
+  bool interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
 
   Stream *_serial;
   DirectionDetector _directionDetector;
@@ -613,26 +657,30 @@ private:
   float prevFixSpeedKmh = 0;
   bool hasPrevFix = false;
 
-  double startFinishPointALat;
-  double startFinishPointALng;
-  double startFinishPointBLat;
-  double startFinishPointBLng;
+  double startFinishPointALat = 0.0;
+  double startFinishPointALng = 0.0;
+  double startFinishPointBLat = 0.0;
+  double startFinishPointBLng = 0.0;
 
   // Sector 2 line coordinates
-  double sector2PointALat;
-  double sector2PointALng;
-  double sector2PointBLat;
-  double sector2PointBLng;
+  double sector2PointALat = 0.0;
+  double sector2PointALng = 0.0;
+  double sector2PointBLat = 0.0;
+  double sector2PointBLng = 0.0;
 
   // Sector 3 line coordinates
-  double sector3PointALat;
-  double sector3PointALng;
-  double sector3PointBLat;
-  double sector3PointBLng;
+  double sector3PointALat = 0.0;
+  double sector3PointALng = 0.0;
+  double sector3PointBLat = 0.0;
+  double sector3PointBLng = 0.0;
 
-  // Sector line configuration flags
+  // Line configuration flags — loop() skips detection for unconfigured lines
+  bool startFinishLineConfigured = false;
   bool sector2LineConfigured = false;
   bool sector3LineConfigured = false;
+
+  // Consecutive fixes rejected for jumping > GPS_MAX_PLAUSIBLE_JUMP_METERS
+  int consecutiveJumpCount = 0;
 
   // Earth's radius in meters
   static constexpr double radiusEarth = 6371.0 * 1000;
