@@ -17,6 +17,9 @@ DovesLapTimer. Compiles and runs on Linux / macOS with `g++` or `clang++`
 | `test_midnight_rollover` | time-base handling | lap / sector / crossing-zone timing across the UTC midnight wrap, `timeSinceMidnightDelta` (CLAUDE.md issue #15) |
 | `test_input_validation` | GPS input guards | NaN/Inf/(0,0)/out-of-range rejection, teleport drop + relocation re-seed, unconfigured / degenerate line safety (issues #14 / #17) |
 | `test_buffer_wraparound` | crossing-buffer ring | parked-in-zone wraparound: park-cross-park and standing-start scenarios (issue #18) |
+| `test_low_rate_gps` | crossing validation | 1 Hz / 5 Hz crossing detection, spacing-scaled validation, `getRejectedCrossingCount()` surfacing (issue #20) |
+| `test_waypoint_lap_timer` | `WaypointLapTimer.h/cpp` | waypoint drop, closest-approach lap splits on a 400m circle, lap accounting, reset semantics |
+| `test_course_manager` | `CourseManager.h/cpp` | detection accept/reject, no-match + distance-failsafe fallbacks (issue #21), Lap-Anything timer deactivation, prune, reset |
 
 ### Layer 3 — NMEA replay regression
 

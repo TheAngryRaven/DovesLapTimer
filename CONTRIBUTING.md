@@ -85,9 +85,15 @@ elevation getter"), and use the body to explain the *why*, not just the *what*.
 
 1. Bump `version=` in `library.properties`.
 2. Move the `CHANGELOG.md` "Unreleased" entries under a new version heading.
-3. Tag the commit (`vX.Y.Z`) and push the tag — or create a GitHub Release,
+3. **Doc-claim spot check**: for every behavior touched this release, read the
+   matching README section and header `@brief`/`@return` aloud against the
+   code. Docs have drifted into outright lies before (the README described a
+   direction-detection algorithm a previous release had removed; two getters
+   documented the wrong units). If the sentence describes code that no longer
+   exists, fix it before tagging.
+4. Tag the commit (`vX.Y.Z`) and push the tag — or create a GitHub Release,
    which creates the tag.
-4. The Arduino Library Manager indexer auto-ingests the new tag within a couple
+5. The Arduino Library Manager indexer auto-ingests the new tag within a couple
    hours. No registry re-submission needed.
 
 ## Questions

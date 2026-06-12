@@ -17,7 +17,6 @@ CourseInfo	KEYWORD1
 CourseTimerEntry	KEYWORD1
 DetectionCandidate	KEYWORD1
 crossingPointBufferEntry	KEYWORD1
-ProximityBufferEntry	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
@@ -65,6 +64,7 @@ getBestSector3LapNumber	KEYWORD2
 getCurrentSector	KEYWORD2
 areSectorLinesConfigured	KEYWORD2
 isStartFinishLineConfigured	KEYWORD2
+getRejectedCrossingCount	KEYWORD2
 
 # DovesLapTimer — direction detection
 getDirection	KEYWORD2
@@ -85,6 +85,7 @@ getActiveCourseIndex	KEYWORD2
 getActiveCourseName	KEYWORD2
 getCourseCount	KEYWORD2
 getDetectionRejectionCount	KEYWORD2
+isCourseTimerActive	KEYWORD2
 getActiveTimer	KEYWORD2
 getLapAnythingTimer	KEYWORD2
 isLapAnythingActive	KEYWORD2
@@ -108,6 +109,7 @@ getWaypointLat	KEYWORD2
 getWaypointLng	KEYWORD2
 getRankedMatchCount	KEYWORD2
 getRankedMatches	KEYWORD2
+getNoMatchCount	KEYWORD2
 
 # WaypointLapTimer
 setProximityMeters	KEYWORD2
@@ -145,10 +147,17 @@ METERS_TO_FEET	LITERAL1
 # Waypoint lap timer tunables
 WAYPOINT_LAP_MIN_DISTANCE_METERS	LITERAL1
 WAYPOINT_LAP_PROXIMITY_METERS	LITERAL1
-WAYPOINT_LAP_BUFFER_SIZE	LITERAL1
 
 # GPS input validation / time base
 DOVES_MILLIS_PER_DAY	LITERAL1
 GPS_MAX_PLAUSIBLE_JUMP_METERS	LITERAL1
 GPS_JUMP_REACCEPT_COUNT	LITERAL1
 CROSSING_MAX_FIX_GAP_MS	LITERAL1
+CROSSING_PAIR_SPACING_FACTOR	LITERAL1
+COURSE_DETECT_MAX_NO_MATCH_PASSES	LITERAL1
+COURSE_DETECT_FALLBACK_DISTANCE_FACTOR	LITERAL1
+COURSE_DETECT_FALLBACK_MIN_METERS	LITERAL1
+GEOMATH_KNOTS_TO_KMH	LITERAL1
+GEOMATH_KMH_TO_MPH	LITERAL1
+GEOMATH_MPH_TO_KMH	LITERAL1
+GEOMATH_METERS_TO_FEET	LITERAL1

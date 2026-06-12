@@ -45,7 +45,7 @@ void WaypointLapTimer::_resetState() {
   _bestLapNumber = 0;
   _laps = 0;
 
-  _clearProximityBuffer();
+  _resetClosestApproach();
 }
 
 void WaypointLapTimer::updateCurrentTime(unsigned long currentTimeMilliseconds) {
@@ -84,7 +84,7 @@ int WaypointLapTimer::loop(double currentLat, double currentLng, float currentAl
 
   _positionPrevLat = currentLat;
   _positionPrevLng = currentLng;
-  _currentSpeedKmh = currentSpeedKnots * 1.852;
+  _currentSpeedKmh = currentSpeedKnots * GEOMATH_KNOTS_TO_KMH;
 
   // State machine
   if (_state == WLT_STATE_IDLE) {
@@ -100,7 +100,7 @@ int WaypointLapTimer::loop(double currentLat, double currentLng, float currentAl
   }
 
   if (_state == WLT_STATE_IN_PROXIMITY) {
-    _bufferProximityPoint(currentLat, currentLng);
+    _updateProximity(currentLat, currentLng);
   }
 
   return -1;
@@ -119,7 +119,7 @@ void WaypointLapTimer::setProximityMeters(float meters) {
 }
 
 void WaypointLapTimer::_checkSpeed(double lat, double lng) {
-  float speedMph = _currentSpeedKmh * 0.621371;
+  float speedMph = _currentSpeedKmh * GEOMATH_KMH_TO_MPH;
 
   if (speedMph >= _speedThresholdMph) {
     _waypointLat = lat;
@@ -144,36 +144,24 @@ void WaypointLapTimer::_checkProximity(double lat, double lng) {
   if (distToWp < _proximityMeters) {
     _state = WLT_STATE_IN_PROXIMITY;
     _crossing = true;
-    _clearProximityBuffer();
-    _bufferProximityPoint(lat, lng);
+    _resetClosestApproach();
+    _updateProximity(lat, lng);
     debugln(F("Entered waypoint proximity"));
   }
 }
 
-void WaypointLapTimer::_bufferProximityPoint(double lat, double lng) {
+void WaypointLapTimer::_updateProximity(double lat, double lng) {
   double distToWp = geoHaversine(lat, lng, _waypointLat, _waypointLng);
 
   // Check if we've exited proximity
   if (distToWp >= _proximityMeters) {
     _state = WLT_STATE_DRIVING;
     _crossing = false;
-    _processProximityBuffer();
+    _finalizeProximityPass();
     return;
   }
 
-  // Buffer this point
-  int idx = _proximityBufferIndex % WAYPOINT_LAP_BUFFER_SIZE;
-  _proximityBuffer[idx].lat = lat;
-  _proximityBuffer[idx].lng = lng;
-  _proximityBuffer[idx].time = _millisecondsSinceMidnight;
-  _proximityBuffer[idx].odometer = _totalDistanceTraveled;
-  _proximityBuffer[idx].distToWaypoint = distToWp;
-  _proximityBufferIndex++;
-  if (_proximityBufferCount < WAYPOINT_LAP_BUFFER_SIZE) {
-    _proximityBufferCount++;
-  }
-
-  // Track closest approach
+  // Track closest approach — the lap split needs only this
   if (distToWp < _closestDist) {
     _closestDist = distToWp;
     _closestTime = _millisecondsSinceMidnight;
@@ -181,16 +169,16 @@ void WaypointLapTimer::_bufferProximityPoint(double lat, double lng) {
   }
 }
 
-void WaypointLapTimer::_clearProximityBuffer() {
-  _proximityBufferIndex = 0;
-  _proximityBufferCount = 0;
+void WaypointLapTimer::_resetClosestApproach() {
   _closestDist = INFINITY;
   _closestTime = 0;
   _closestOdometer = 0;
 }
 
-void WaypointLapTimer::_processProximityBuffer() {
-  if (_closestTime == 0) {
+void WaypointLapTimer::_finalizeProximityPass() {
+  // _closestDist is the "was anything recorded" sentinel — a timestamp of 0
+  // is a legitimate closest approach at exactly 00:00:00.000 UTC.
+  if (_closestDist == INFINITY) {
     debugln(F("No valid closest point found"));
     return;
   }
@@ -303,7 +291,7 @@ float WaypointLapTimer::getCurrentSpeedKmh() const {
 }
 
 float WaypointLapTimer::getCurrentSpeedMph() const {
-  return _currentSpeedKmh / 1.60934f;
+  return _currentSpeedKmh * GEOMATH_KMH_TO_MPH;
 }
 
 float WaypointLapTimer::getLastLapDistance() const {

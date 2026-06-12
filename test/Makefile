@@ -30,9 +30,19 @@ LIB_SRCS = ../src/DovesLapTimer.cpp \
 TEST_SRCS = $(wildcard test_*.cpp)
 TEST_BINS = $(TEST_SRCS:%.cpp=build/%)
 
+# Every header any test could pull in. Listing them as prerequisites is
+# deliberately coarse (any header edit rebuilds everything — the suite
+# builds in seconds) but it closes the false-green hole where `make run`
+# passed on binaries that were stale against ../src/*.h, replay_runner.h,
+# or the NMEA fixture headers.
+HEADERS = $(wildcard ../src/*.h) \
+          $(wildcard ../examples/real_track_data_debug/*.h) \
+          $(wildcard mock/*.h) \
+          test_runner.h replay_runner.h
+
 all: $(TEST_BINS)
 
-build/%: %.cpp $(LIB_SRCS) test_runner.h mock/Arduino.h mock/ArxTypeTraits.h
+build/%: %.cpp $(LIB_SRCS) $(HEADERS)
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LIB_SRCS) $(LDFLAGS)
 
@@ -58,13 +68,15 @@ clean:
 # ----- Coverage -----
 # Instruments the library sources, runs every test binary (gcda accumulates
 # across them), and summarizes line coverage of ../src/ with gcovr. Fails if
-# below COVERAGE_GATE percent. The gate starts intentionally low — raise it
-# as coverage grows. Override on the command line: `make coverage COVERAGE_GATE=40`.
-COVERAGE_GATE ?= 1
+# below COVERAGE_GATE percent. The gate sits just below measured coverage
+# (84.5% line as of 2026-06-11) so any change that meaningfully drops
+# coverage fails CI — keep ratcheting it up alongside new tests.
+# Override on the command line: `make coverage COVERAGE_GATE=40`.
+COVERAGE_GATE ?= 80
 COV_DIR        = coverage
 COV_BINS       = $(TEST_SRCS:%.cpp=$(COV_DIR)/%)
 
-$(COV_DIR)/%: %.cpp $(LIB_SRCS) test_runner.h mock/Arduino.h mock/ArxTypeTraits.h
+$(COV_DIR)/%: %.cpp $(LIB_SRCS) $(HEADERS)
 	@mkdir -p $(COV_DIR)
 	$(CXX) $(CXXFLAGS) --coverage -o $@ $< $(LIB_SRCS) $(LDFLAGS)
 

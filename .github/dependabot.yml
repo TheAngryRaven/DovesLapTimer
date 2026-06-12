@@ -1,0 +1,13 @@
+# Keep GitHub Actions dependencies monitored. All workflow actions are
+# pinned to commit SHAs (supply-chain hardening); Dependabot proposes PRs
+# that bump those SHAs when new releases land, so pins don't rot.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"

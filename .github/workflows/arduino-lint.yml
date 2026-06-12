@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Arduino Lint
-        uses: arduino/arduino-lint-action@v2
+        uses: arduino/arduino-lint-action@4de5fc895deecbda2f6b1cc05de7a8fdd5c4c51f # v2.0.0
         with:
           project-type: library
           compliance: specification
@@ -26,7 +26,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: arduino-lint-report
           path: arduino-lint-report.json

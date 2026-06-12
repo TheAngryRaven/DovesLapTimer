@@ -28,6 +28,7 @@ void CourseDetector::reset() {
   _waypointOdometer = 0;
   _detectedCourseIndex = -1;
   _rankedMatchCount = 0;
+  _noMatchCount = 0;
 }
 
 void CourseDetector::update(double lat, double lng, float speedKmh, float totalOdometer) {
@@ -51,7 +52,7 @@ void CourseDetector::update(double lat, double lng, float speedKmh, float totalO
 }
 
 void CourseDetector::_checkSpeedThreshold(double lat, double lng, float speedKmh, float totalOdometer) {
-  float speedMph = speedKmh * 0.621371;
+  float speedMph = speedKmh * GEOMATH_KMH_TO_MPH;
 
   if (speedMph >= _speedThresholdMph) {
     _waypointLat = lat;
@@ -78,6 +79,7 @@ void CourseDetector::_checkWaypointProximity(double lat, double lng, float total
       // laps and a second pass would falsely match a longer layout (same
       // root cause as the rejection-cooldown bug, CLAUDE.md issue #13).
       _waypointOdometer = totalOdometer;
+      _noMatchCount++;
     }
   }
 }
@@ -173,4 +175,8 @@ int CourseDetector::getRankedMatchCount() const {
 
 const DetectionCandidate* CourseDetector::getRankedMatches() const {
   return _rankedMatches;
+}
+
+int CourseDetector::getNoMatchCount() const {
+  return _noMatchCount;
 }

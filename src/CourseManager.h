@@ -56,6 +56,10 @@ public:
   const char* getActiveCourseName() const;
   int getCourseCount() const;
   int getDetectionRejectionCount() const;
+  // True while the given course's timer is still being fed GPS data.
+  // Courses are deactivated by pruneInactiveCourses() after detection, or
+  // automatically when the Lap Anything fallback activates.
+  bool isCourseTimerActive(int index) const;
 
   // Timer access
   DovesLapTimer* getActiveTimer();
@@ -101,6 +105,10 @@ private:
   bool _detectionComplete;
   bool _lapAnythingActive;
   int _detectionRejectionCount;
+  // Odometer reading beyond which incomplete detection falls back to Lap
+  // Anything (factor x longest configured course, floored — see
+  // COURSE_DETECT_FALLBACK_* in DovesLapTimer.h).
+  float _fallbackDistanceMeters;
 
   const char* _trackLongName;
   const char* _trackShortName;

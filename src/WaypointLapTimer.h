@@ -26,14 +26,6 @@
 #define WLT_STATE_DRIVING        2
 #define WLT_STATE_IN_PROXIMITY   3
 
-struct ProximityBufferEntry {
-  double lat;
-  double lng;
-  unsigned long time;
-  float odometer;
-  float distToWaypoint;
-};
-
 class WaypointLapTimer {
 public:
   WaypointLapTimer(Stream *debugSerial = NULL);
@@ -97,9 +89,9 @@ private:
   void _resetState();
   void _checkSpeed(double lat, double lng);
   void _checkProximity(double lat, double lng);
-  void _bufferProximityPoint(double lat, double lng);
-  void _clearProximityBuffer();
-  void _processProximityBuffer();
+  void _updateProximity(double lat, double lng);
+  void _resetClosestApproach();
+  void _finalizeProximityPass();
 
   Stream *_serial;
 
@@ -133,10 +125,10 @@ private:
   int _bestLapNumber;
   int _laps;
 
-  // Proximity buffer
-  ProximityBufferEntry _proximityBuffer[WAYPOINT_LAP_BUFFER_SIZE];
-  int _proximityBufferIndex;
-  int _proximityBufferCount;
+  // Closest approach to the waypoint during the current proximity pass.
+  // Only these three scalars are needed for the lap split — the old
+  // 50-entry buffer of every in-proximity fix was written and never read
+  // (1.6 KB of dead SRAM per instance).
   float _closestDist;
   unsigned long _closestTime;
   float _closestOdometer;
