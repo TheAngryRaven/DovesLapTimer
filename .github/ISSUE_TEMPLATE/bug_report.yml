@@ -15,7 +15,7 @@ body:
     attributes:
       label: Library version
       description: From the Arduino Library Manager, or the `version=` in library.properties.
-      placeholder: "4.1.0"
+      placeholder: "4.2.0"
     validations:
       required: true
 

@@ -40,7 +40,7 @@ In short: tests with changes, changelog updated, docs truthful, no broken window
 
 **What**: GPS-based lap timing Arduino library for go-kart / racing applications.
 **Author**: Michael Champagne (crimsondove)
-**Version**: 4.1.0
+**Version**: 4.2.0
 **Repo**: https://github.com/TheAngryRaven/DovesLapTimer
 **License**: GPL v3
 **Dependency**: ArxTypeTraits (auto-included by Arduino Library Manager)
