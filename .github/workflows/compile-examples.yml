@@ -61,7 +61,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # Seeed nRF52 BSP shells out to adafruit-nrfutil during link to package
       # the .hex into a .zip, even when we're only compiling — so install it
@@ -71,7 +71,7 @@ jobs:
         run: pip install --user adafruit-nrfutil
 
       - name: Compile sketches
-        uses: arduino/compile-sketches@v1
+        uses: arduino/compile-sketches@8ac27e99289705c4abec832089575d687b859227 # v1.1.2
         with:
           fqbn: ${{ matrix.board.fqbn }}
           platforms: ${{ matrix.board.platforms }}
@@ -88,7 +88,7 @@ jobs:
 
       - name: Upload size deltas report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: size-deltas-${{ matrix.board.alias }}
           path: sketches-reports

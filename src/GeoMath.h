@@ -12,6 +12,7 @@
 #define _GEOMATH_H
 
 #include <math.h>
+#include <float.h>
 
 // M_PI is not part of the C/C++ standard — it's a POSIX/BSD extension that
 // glibc happens to expose by default but stricter libcs (e.g. under
@@ -22,6 +23,49 @@
 #endif
 
 static const double GEOMATH_RADIUS_EARTH = 6371.0 * 1000; // meters
+
+// Unit conversion constants — the single source of truth for the unit
+// boundaries the public API spans (knots from NMEA, km/h internally, mph
+// for the US-facing speed gates, feet for course lengths). One nautical
+// mile is exactly 1852 m and one statute mile exactly 1609.344 m, so the
+// derived factors below stay mutually consistent (previously three
+// hand-typed literals disagreed at the 7th digit).
+static constexpr double GEOMATH_KNOTS_TO_KMH  = 1.852;
+static constexpr double GEOMATH_MPH_TO_KMH    = 1.609344;
+static constexpr double GEOMATH_KMH_TO_MPH    = 1.0 / GEOMATH_MPH_TO_KMH;
+static constexpr double GEOMATH_METERS_TO_FEET = 1.0 / 0.3048; // 1 ft = 0.3048 m exactly
+
+/**
+ * @brief Checks a value is a real, finite number (not NaN, not +/-infinity).
+ *
+ * Implemented without isnan()/isinf() because their availability as
+ * unqualified names differs between Arduino cores and host <cmath>.
+ *
+ * @param v Value to check.
+ * @return True if v is finite, false for NaN or infinity.
+ */
+static inline bool geoIsFinite(double v) {
+  return v == v && v <= DBL_MAX && v >= -DBL_MAX;
+}
+
+/**
+ * @brief Validates a GPS coordinate pair before it is allowed to touch timing state.
+ *
+ * Rejects NaN/infinity (routine output from NMEA parsers during fix loss),
+ * out-of-range latitudes/longitudes, and the exact (0, 0) "null island" fix
+ * that parsers emit while the receiver has no solution. A single such fix
+ * would otherwise permanently poison odometers and distance tracking.
+ *
+ * @param lat Latitude in decimal degrees.
+ * @param lng Longitude in decimal degrees.
+ * @return True if the pair is a plausible real-world coordinate.
+ */
+static inline bool geoCoordinatesValid(double lat, double lng) {
+  if (!geoIsFinite(lat) || !geoIsFinite(lng)) return false;
+  if (lat < -90.0 || lat > 90.0 || lng < -180.0 || lng > 180.0) return false;
+  if (lat == 0.0 && lng == 0.0) return false;
+  return true;
+}
 
 static inline double geoHaversine(double lat1, double lon1, double lat2, double lon2) {
   double lat1Rad = lat1 * M_PI / 180.0;

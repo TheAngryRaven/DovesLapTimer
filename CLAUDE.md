@@ -40,7 +40,7 @@ In short: tests with changes, changelog updated, docs truthful, no broken window
 
 **What**: GPS-based lap timing Arduino library for go-kart / racing applications.
 **Author**: Michael Champagne (crimsondove)
-**Version**: 4.1.0
+**Version**: 4.2.0
 **Repo**: https://github.com/TheAngryRaven/DovesLapTimer
 **License**: GPL v3
 **Dependency**: ArxTypeTraits (auto-included by Arduino Library Manager)
@@ -108,15 +108,33 @@ CourseManager (orchestrator)
 ### Main Loop Flow
 1. User calls `updateCurrentTime(millisecondsSinceMidnight)` with GPS time
 2. User calls `loop(lat, lng, altMeters, speedKnots)` on each GPS fix
-3. `loop()` updates odometer (haversine3D), speed, then checks all crossing lines
-4. `checkStartFinish()` and `checkSectorLine()` handle detection + interpolation
+3. `loop()` validates the fix (NaN/Inf/out-of-range/(0,0) rejected; >500m
+   single-fix teleports dropped, sustained relocation re-accepted after 3
+   fixes without crediting the gap; non-finite alt/speed sanitized)
+4. `loop()` updates odometer (haversine3D), speed, then checks all crossing
+   lines (start/finish only if `startFinishLineConfigured`)
+5. `checkStartFinish()` and `checkSectorLine()` handle detection + interpolation
 
 Both call a shared private helper `_detectLineCrossing()` that runs the zone
 state machine, manages the GPS-fix buffer, and produces interpolated crossing
 output via out-params. Callers branch on the helper's `LineDetectResult`
 (NONE / IN_ZONE / COMPLETED) and do their own post-crossing accounting
 (`checkStartFinish` does lap timing, `checkSectorLine` just delegates to
-`handleLineCrossing`).
+`handleLineCrossing`). A zone exit whose interpolation is invalid (no
+straddling pair, or pair gap > `CROSSING_MAX_FIX_GAP_MS`) reports NONE so
+callers never consume garbage out-params — the old `time != 0` validity
+sentinel is gone (a crossing at exactly 00:00:00.000 UTC is legitimate).
+
+### Time Base (midnight rollover)
+All timestamps are milliseconds since UTC midnight and wrap 86,399,999 → 0.
+Every duration is computed via `timeSinceMidnightDelta(start, end)` (static
+inline in `DovesLapTimer.h`), which normalizes across the wrap. The crossing
+interpolator computes its fix-pair delta in `double` (wrap-normalized, then
+clamped to `CROSSING_MAX_FIX_GAP_MS`) before converting back to `unsigned
+long`, avoiding out-of-range double→unsigned UB. Known limitation: a
+*backwards* GPS time step that isn't a midnight wrap is indistinguishable
+from one and produces a near-day-length delta — the interpolator clamp
+catches it inside a crossing zone; lap-level deltas do not.
 
 ### Crossing Detection Algorithm (the hard part)
 - Uses **hypotenuse-based threshold** (not simple distance-to-line)
@@ -160,8 +178,10 @@ output via out-params. Callers branch on the helper's `LineDetectResult`
   frames and jumping straight to Lap Anything
 
 ### WaypointLapTimer ("Lap Anything") (v4.0)
-- Fallback when no course is detected (after 3 rejections)
-- Drops waypoint at speed, uses proximity buffer (30m zone) for closest-approach timing
+- Fallback when no course is detected (after rejections / no-match passes / distance failsafe)
+- Drops waypoint at speed, tracks closest approach inside a 30m proximity zone
+  for the lap split (three scalars — the old 50-entry buffer was write-only
+  dead memory and was removed; ~150 B per instance now)
 - Duck-typed to match DovesLapTimer's public API
 - No sector support (getters return 0)
 
@@ -169,18 +189,37 @@ output via out-params. Callers branch on the helper's `LineDetectResult`
 - Orchestrates multiple DovesLapTimers + CourseDetector + WaypointLapTimer
 - Feeds ALL active timers the same GPS data simultaneously
 - Validates detection candidates via `raceStarted` check
-- Falls back to Lap Anything after `COURSE_DETECT_MAX_REJECTIONS` (3) failures
-- `pruneInactiveCourses()` deactivates non-detected timers to save memory
+- Falls back to Lap Anything via three routes: `COURSE_DETECT_MAX_REJECTIONS`
+  (3) candidate rejections, `COURSE_DETECT_MAX_NO_MATCH_PASSES` (3) completed
+  proximity passes that matched no course length (the detector never produces
+  candidates with a wrong/missing config — pre-fix this hung detection
+  forever), or the odometer exceeding
+  `COURSE_DETECT_FALLBACK_DISTANCE_FACTOR` (4) × longest course (floored at
+  `COURSE_DETECT_FALLBACK_MIN_METERS`, 2000m) for drivers who never return
+  to the waypoint
+- Activating Lap Anything deactivates ALL course timers (they'd never be
+  surfaced again; pre-fix they kept burning CPU on every fix forever)
+- `pruneInactiveCourses()` stops *processing* non-detected timers — saves
+  CPU per fix, frees ZERO bytes (the 8-slot array is statically allocated)
 
 ### Memory Management
 - Circular buffer `crossingPointBuffer` sized per platform:
   - Classic AVR with `RAMEND - RAMSTART > 3000` (e.g., Mega): 100 entries
   - Classic AVR with `RAMEND - RAMSTART <= 3000` (e.g., Uno): 25 entries
   - Any non-AVR (`RAMEND`/`RAMSTART` undefined — nRF52, ESP32, SAMD, RP2040): 100 entries
-- Buffer is reset (memset + index=0) at the end of every crossing — wraparound within a single crossing is a non-concern at kart speeds
+- Buffer is reset (memset + index=0) at the end of every crossing. The buffer
+  CAN wrap within a single crossing (kart parked in the zone — standing start,
+  red flag); the interpolator unwinds the ring chronologically before scanning
+  so the seam pair (newest adjacent to oldest) can't masquerade as a crossing
 - Buffer is shared between all line crossings (start/finish + sectors)
 - Mutual exclusion: only one line can be "crossing" at a time
-- CourseManager peak: ~24 KB during detection (8 courses), drops to ~5 KB after pruning
+- CourseManager: ~29 KB with 64-bit doubles (8 × ~3.6 KB by-value timer array,
+  allocated for MAX_COURSES regardless of configured course count). Pruning /
+  Lap-Anything deactivation save CPU only — no memory is ever released. Does
+  NOT fit on AVR Mega (8 KB SRAM)
+- Classic AVR additionally runs with 32-bit `double` — a `#warning` fires at
+  compile time; lap counting works but odometer/interpolation accuracy is
+  degraded (see README hardware notes)
 
 ### Shared GeoMath (v4.0)
 - `GeoMath.h` provides `geoHaversine()` and `geoHaversine3D()` as `static inline` functions
@@ -223,6 +262,7 @@ output via out-params. Callers branch on the helper's `LineDetectResult`
 | `getBestLapNumber()` | Lap # of best time |
 | `getCurrentSector()` | 0=not started, 1/2/3 |
 | `areSectorLinesConfigured()` | True if both sector lines set |
+| `isStartFinishLineConfigured()` | True once a valid start/finish line set |
 | `getCurrentLapDistance()` | Current lap meters |
 | `getLastLapDistance()` | Last lap meters |
 | `getBestLapDistance()` | Best lap meters |
@@ -230,6 +270,7 @@ output via out-params. Callers branch on the helper's `LineDetectResult`
 | `getPaceDifference()` | Pace delta vs best lap |
 | `getDirection()` | DIR_UNKNOWN/DIR_FORWARD/DIR_REVERSE |
 | `isDirectionResolved()` | True once direction is known |
+| `getRejectedCrossingCount()` | Zone exits whose interpolation was rejected |
 
 ### WaypointLapTimer API (duck-typed to DovesLapTimer)
 Same timing/state getters as DovesLapTimer. Sector getters return 0. Additional:
@@ -249,6 +290,7 @@ Same timing/state getters as DovesLapTimer. Sector getters return 0. Additional:
 | `getState()` | Current detection state |
 | `isDetected()` | True if course detected |
 | `getDetectedCourseIndex()` | Index of detected course |
+| `getNoMatchCount()` | Completed proximity passes that matched no course |
 
 ### CourseManager API
 | Method | Returns |
@@ -256,7 +298,8 @@ Same timing/state getters as DovesLapTimer. Sector getters return 0. Additional:
 | `updateCurrentTime(ms)` | Feed time to all timers |
 | `loop(lat, lng, alt, speedKnots)` | Feed GPS to all timers + detector |
 | `reset()` | Reset everything |
-| `pruneInactiveCourses()` | Free non-detected timer memory |
+| `pruneInactiveCourses()` | Stop feeding non-detected timers (CPU only, frees no RAM) |
+| `isCourseTimerActive(index)` | True while that course's timer is still fed |
 | `isDetectionComplete()` | True if course detected or Lap Anything active |
 | `getActiveTimer()` | Pointer to detected course's DovesLapTimer |
 | `getLapAnythingTimer()` | Pointer to WaypointLapTimer |
@@ -301,9 +344,17 @@ struct TrackConfig {
 | `COURSE_DETECT_MAX_REJECTIONS` | 3 | Rejections before Lap Anything fallback |
 | `WAYPOINT_LAP_MIN_DISTANCE_METERS` | 100.0 | Min travel for waypoint lap timer |
 | `WAYPOINT_LAP_PROXIMITY_METERS` | 30.0 | Proximity zone for waypoint timing |
-| `WAYPOINT_LAP_BUFFER_SIZE` | 50 | Proximity buffer entries |
+| `COURSE_DETECT_MAX_NO_MATCH_PASSES` | 3 | No-match laps before Lap Anything fallback |
+| `COURSE_DETECT_FALLBACK_DISTANCE_FACTOR` | 4.0 | × longest course = detection distance failsafe |
+| `COURSE_DETECT_FALLBACK_MIN_METERS` | 2000.0 | Floor for the distance failsafe |
+| `CROSSING_PAIR_SPACING_FACTOR` | 1.25 | Crossing-pair sum bound scales with fix spacing |
+| `GEOMATH_KNOTS_TO_KMH` etc. | — | Shared unit-conversion constants (`GeoMath.h`) |
 | `DIR_UNKNOWN/DIR_FORWARD/DIR_REVERSE` | 0/1/2 | Direction detection states |
 | `DETECT_STATE_*` | 0-4 | Course detection state machine states |
+| `DOVES_MILLIS_PER_DAY` | 86400000 | GPS time-of-day wrap point (UTC midnight) |
+| `GPS_MAX_PLAUSIBLE_JUMP_METERS` | 500.0 | Single-fix jump beyond this = glitch, dropped |
+| `GPS_JUMP_REACCEPT_COUNT` | 3 | Consecutive far fixes before re-seeding position |
+| `CROSSING_MAX_FIX_GAP_MS` | 10000 | Max believable gap between crossing-pair fixes |
 
 ## Known Issues & TODOs (from code comments)
 
@@ -328,6 +379,17 @@ struct TrackConfig {
 11. ~~**Direction detector mis-classified forward as reverse**~~: Fixed (2026-05-20). `DirectionDetector::onLineCrossing` used to lock direction from whichever single sector line (S2 or S3) was hit first after `raceSeen`. A poorly-placed sector line that the racing line missed (or low GPS sample rate that skipped the zone) caused S3 to be hit "first", flipping direction to reverse forever. Now requires BOTH physical S2 and S3 to be crossed within a lap window and decides from their temporal order at the next start/finish. Same root cause as the ported webapp bug `courseDetection.ts:67-90`.
 12. ~~**Direction lockout on glitched first crossing**~~: Fixed (2026-05-20). Same change as #11. The old "first crossing wins" rule meant a single GPS teleport that triggered a phantom S3 crossing locked direction to reverse permanently. The new logic requires both sector lines and lets the *latest* in-lap crossing overwrite earlier phantoms, dramatically shrinking the surface area for a single glitch to mis-lock. Same root cause as the ported webapp bug `lapCalculation.ts:107`. Note: a glitch that fabricates BOTH sector crossings on the same lap could still mis-lock — a multi-lap voting threshold would harden this further but was deferred.
 13. ~~**CourseManager burned through MAX_REJECTIONS in a few GPS frames**~~: Fixed (2026-05-20). When `_handleCandidatesReady` rejected all candidates, `rejectAllCandidates()` only reset state to `WAYPOINT_SET`; the driver was still inside waypoint proximity with `distanceSinceWaypoint` still well above the 200m gate, so the very next GPS fix re-triggered ranking → same candidates → reject → repeat. At 25 Hz this burned all 3 rejections in ~120 ms, falling straight to Lap Anything without the driver completing another real lap. Fix: `rejectAllCandidates(currentOdometer)` now advances `_waypointOdometer` to "now", so the next ranking pass requires another full lap (200m+ traveled and returned to proximity).
+14. ~~**Start/finish line never initialized — `loop()` read indeterminate memory**~~: Fixed (2026-06-11, code-review C1). The four `startFinishPoint*` doubles had no initializers and no configured flag, and `loop()` unconditionally called `checkStartFinish()` — calling `loop()` before `setStartFinishLine()` was UB with potential phantom crossings. All line members are now zero-initialized, `startFinishLineConfigured` gates detection, `isStartFinishLineConfigured()` exposes it, and all three line setters reject degenerate (A==B, e.g. example-sketch 0.00 placeholders) or non-finite lines.
+15. ~~**Midnight rollover / backwards GPS time corrupted every time computation**~~: Fixed (2026-06-11, code-review C2). See "Time Base (midnight rollover)" section above. Tests: `test/test_midnight_rollover.cpp`.
+16. ~~**Course detection falsely matched longer layouts on no-match laps**~~: Fixed (2026-06-11, code-review C3). `_checkWaypointProximity` now re-anchors `_waypointOdometer` after a completed proximity pass with no match, so `distanceSinceWaypoint` can't accumulate across laps and match a 2x-length layout (same root-cause class as #13).
+17. ~~**Zero GPS input validation — NaN/(0,0) fix poisoned state forever**~~: Fixed (2026-06-11, code-review H1). `DovesLapTimer::loop()`, `WaypointLapTimer::loop()`, and `CourseDetector::update()` validate input via `GeoMath.h::geoCoordinatesValid()`/`geoIsFinite()`; teleport fixes are dropped with a 3-fix re-accept (see Main Loop Flow). Tests: `test/test_input_validation.cpp`.
+18. ~~**Crossing-buffer wraparound broke the interpolator's chronology assumption**~~: Fixed (2026-06-11, code-review H2). The interpolator unwinds the ring chronologically before scanning (see Memory Management). Triggered by a kart parked on/near the line — standing start, red flag. Tests: `test/test_buffer_wraparound.cpp`.
+19. **AVR `double` is 32-bit — degraded precision** (code-review H3): documented + `#warning` on 4-byte-double targets (2026-06-11). Lap counting works; odometer/interpolation accuracy degraded. The *full* fix (local-tangent-plane offsets from a reference point so float precision suffices) was deferred — see PR notes.
+20. ~~**Low-rate GPS silently killed lap counting**~~: Fixed (2026-06-11, code-review H4). Crossing validation now scales with the straddle pair's spacing (`CROSSING_PAIR_SPACING_FACTOR`), the zone-exiting fix is buffered, an on-segment geometric check backstops the looser bound, and rejections surface via `getRejectedCrossingCount()`. Tests: `test/test_low_rate_gps.cpp`.
+21. ~~**Lap-Anything fallback unreachable when no candidates ever ranked**~~: Fixed (2026-06-11, code-review H5). No-match pass counter + odometer failsafe both feed the fallback (see CourseManager section). Tests: `test/test_course_manager.cpp`.
+22. ~~**"Pruning saves memory" was false; Lap-Anything left 8 timers running**~~: Fixed/corrected (2026-06-11, code-review H6+H7). Docs now state pruning saves CPU only (~29 KB statically allocated either way; CourseManager cannot fit on AVR Mega); `_activateLapAnything()` deactivates all course timers. The placement-new storage-pool redesign that would actually release memory was deferred — see PR notes.
+23. ~~**WaypointLapTimer carried 1.6 KB of write-only buffer**~~: Removed (2026-06-11, code-review H8). Closest-approach scalars suffice; `WAYPOINT_LAP_BUFFER_SIZE` and `ProximityBufferEntry` deleted. Instance size ~150 B.
+24. **Five-unit API surface** (code-review H14): knots into `loop()`, km/h into `CourseDetector::update()`, mph thresholds, feet course lengths, meters everywhere else. Conversions now go through shared `GeoMath.h` constants so they can't drift, but standardizing new API on one speed unit remains future work (breaking change).
 
 ## Supported Hardware
 
@@ -373,7 +435,7 @@ GitHub Actions workflows live in `.github/workflows/`:
 - **docs.yml** — builds Doxygen HTML from `src/` + `examples/` + `README.md` +
   `DETECTION.md` using the doxygen-awesome-css theme vendored under `docs/`.
   On push to master, deploys the output (`docs-build/html/`) to the
-  `gh-pages` branch via `peaceiris/actions-gh-pages@v3` with
+  `gh-pages` branch via `peaceiris/actions-gh-pages` (v4, SHA-pinned) with
   `force_orphan: true` (keeps the gh-pages branch lean — overwrites
   rather than accumulating history). On PR, builds-only without
   deploying so we catch a broken Doxyfile before merge. Live site:
@@ -382,18 +444,25 @@ GitHub Actions workflows live in `.github/workflows/`:
 
 - **coverage.yml** — builds the `test/` suite with `g++ --coverage`, runs it,
   and summarizes line coverage of `src/` with `gcovr`. Gated on every PR via
-  `make coverage` (fails under `COVERAGE_GATE`, default **1%** — intentionally
-  low so it's easy to raise as coverage grows; bump the `COVERAGE_GATE ?= 1`
-  line in `test/Makefile`). On push to master it generates a shields.io
-  endpoint JSON (`make coverage-badge`) and publishes it to the `badges`
-  branch (orphan, badge JSON only) via `peaceiris/actions-gh-pages@v3`. The
+  `make coverage` (fails under `COVERAGE_GATE`, currently **80%** — sits just
+  below measured coverage; keep ratcheting it up alongside new tests via the
+  `COVERAGE_GATE ?=` line in `test/Makefile`). On push to master it generates
+  a shields.io endpoint JSON (`make coverage-badge`) and publishes it to the
+  `badges` branch (orphan, badge JSON only) via `peaceiris/actions-gh-pages`. The
   README badge reads that JSON through `img.shields.io/endpoint`. On every PR
   it also posts/updates a per-PR coverage summary comment (gcovr `--markdown`
   via first-party `actions/github-script` — no third-party service, runs
-  entirely in-runner). Current line coverage ~51% — `GeoMath` 100%,
-  `CourseDetector` 93%, `DovesLapTimer` 75%, but `CourseManager` and
-  `WaypointLapTimer` sit at 0% (no direct tests yet — see the path-to-8.5
-  notes).
+  entirely in-runner). Current line coverage ~84.5% (gate at 80) — every
+  module now has direct tests, including `CourseManager`
+  (`test_course_manager.cpp`) and `WaypointLapTimer`
+  (`test_waypoint_lap_timer.cpp`).
+
+Supply chain: every `uses:` is pinned to a verified commit SHA (with a
+trailing `# vX` comment naming the release), `.github/dependabot.yml`
+(github-actions ecosystem, weekly, grouped) keeps the pins from rotting, and
+the gh-pages/badge deploy steps additionally require
+`github.ref == 'refs/heads/master'` so a `workflow_dispatch` from a feature
+branch cannot overwrite production docs or the badge.
 
 All five workflows trigger on push to `main`/`master`, on any PR, and
 manually via `workflow_dispatch`. Status badges are linked at the top of
@@ -406,8 +475,14 @@ README.md.
   missing includes, broken API signatures, fatal SRAM/flash overruns.
 - **Layer 2 — host unit tests** (`unit-tests.yml`): runs `test/` on the
   host via `make run`. Covers `GeoMath`, `DirectionDetector`,
-  `CourseDetector` state machine, and a synthetic-track integration
-  pass over the full `DovesLapTimer` pipeline. Catches algorithm
+  `CourseDetector` state machine, `CourseManager` orchestration
+  (`test_course_manager.cpp`), `WaypointLapTimer`
+  (`test_waypoint_lap_timer.cpp`), a synthetic-track integration
+  pass over the full `DovesLapTimer` pipeline, plus regression suites for
+  midnight rollover (`test_midnight_rollover.cpp`), adversarial GPS input
+  (`test_input_validation.cpp`), crossing-buffer wraparound
+  (`test_buffer_wraparound.cpp`), and low-rate GPS crossing detection
+  (`test_low_rate_gps.cpp`). Catches algorithm
   regressions that compile fine but produce wrong numbers. See
   `test/README.md` for layout and how to add a suite.
 - **Layer 3 — NMEA replay regression** (`unit-tests.yml`, same job): replays the
