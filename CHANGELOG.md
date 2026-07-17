@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.0] – 2026-07-17
+
+A hardening release built on the v4.1 test harness. No breaking API changes;
+everything from v4.0/v4.1 keeps working. Fifteen code-review findings across two
+rounds (line-crossing detection at low GPS rates, detection fallbacks, midnight
+rollover, adversarial GPS input, buffer wraparound, precision honesty, and CI
+supply-chain hardening) are fixed, each with a regression test. Adds the public
+getters `getRejectedCrossingCount()`, `isStartFinishLineConfigured()`,
+`CourseDetector::getNoMatchCount()`, and `CourseManager::isCourseTimerActive()`.
+
 ### Fixed
 - **Low-rate GPS silently killed all lap counting** — crossing validation
   required the straddle pair's summed distance to the line to be under
@@ -269,5 +279,6 @@ actually matters.
 For pre-4.0 history (initial sector timing, Catmull-Rom interpolation
 work, etc.) see the git log directly.
 
+[4.2.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.2.0
 [4.1.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.1.0
 [4.0.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.0.0
