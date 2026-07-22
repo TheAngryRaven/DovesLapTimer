@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['testing_20validation_0',['Testing &amp; validation',['../index.html#autotoc_md12',1,'']]],
+  ['that_20won_20currently_20deployed_1',['The solution that won (currently deployed)',['../md_DETECTION.html#autotoc_md43',1,'']]],
+  ['the_20first_20attempt_20and_20why_20it_20broke_2',['The first attempt (and why it broke)',['../md_DETECTION.html#autotoc_md42',1,'']]],
+  ['the_20order_20of_20operations_3',['The order of operations',['../md_DETECTION.html#autotoc_md40',1,'']]],
+  ['the_20proof_4',['Does it actually work? Yes — here&apos;s the proof',['../md_DETECTION.html#autotoc_md44',1,'']]],
+  ['the_20solution_20that_20won_20currently_20deployed_5',['The solution that won (currently deployed)',['../md_DETECTION.html#autotoc_md43',1,'']]],
+  ['tillotson_20motor_6',['Two Laps, Normal Track, Praga Dark with blown tillotson motor',['../gps__race__data__praga__laps_8h.html#autotoc_md7',1,'']]],
+  ['time_7',['time',['../structcrossingPointBufferEntry.html#a8096e9daf8df943326d4d57660a1574a',1,'crossingPointBufferEntry']]],
+  ['timer_8',['timer',['../index.html',1,'Doves GPS Lap Timer'],['../structCourseTimerEntry.html#ab0647af96f013552551e98be77798e23',1,'CourseTimerEntry::timer']]],
+  ['timesincemidnightdelta_9',['timeSinceMidnightDelta',['../DovesLapTimer_8h.html#a2c8b02a1e1ab56d352bf7610d3a092f6',1,'DovesLapTimer.h']]],
+  ['to_20be_20weird_10',['How crossing detection works (and why it has to be weird)',['../md_DETECTION.html',1,'']]],
+  ['tony_20rental_11',['tony rental',['../gps__race__data__lap_8h.html#autotoc_md3',1,'One Lap, Normal Track, White Tony Rental'],['../gps__race__data__2laps_8h.html#autotoc_md0',1,'Two Laps, Normal Track, White Tony Rental']]],
+  ['track_12',['Define Your Track',['../index.html#autotoc_md27',1,'']]],
+  ['track_202stroke_20praga_20mini_20rotax_13',['Single Lap, Pro Track, 2Stroke Praga Mini/Rotax',['../gps__race__data__long__lap_8h.html#autotoc_md5',1,'']]],
+  ['track_20praga_20dark_20with_20blown_20tillotson_20motor_14',['Two Laps, Normal Track, Praga Dark with blown tillotson motor',['../gps__race__data__praga__laps_8h.html#autotoc_md7',1,'']]],
+  ['track_20white_20tony_20rental_15',['track white tony rental',['../gps__race__data__lap_8h.html#autotoc_md3',1,'One Lap, Normal Track, White Tony Rental'],['../gps__race__data__2laps_8h.html#autotoc_md0',1,'Two Laps, Normal Track, White Tony Rental']]],
+  ['track_5feast_5flng_16',['TRACK_EAST_LNG',['../sector__timing__example_8ino.html#a7e3b8cc79dc56afaca69c6ef32b5b092',1,'sector_timing_example.ino']]],
+  ['track_5fnorth_5flat_17',['TRACK_NORTH_LAT',['../sector__timing__example_8ino.html#a2c9989d75a759b809f568dd9d2d4e94c',1,'sector_timing_example.ino']]],
+  ['track_5fsouth_5flat_18',['TRACK_SOUTH_LAT',['../sector__timing__example_8ino.html#a0dc4889aef3c7d2f02054356f362147a',1,'sector_timing_example.ino']]],
+  ['track_5fwest_5flng_19',['TRACK_WEST_LNG',['../sector__timing__example_8ino.html#ada445ee1ab4db7d7620dcc411840bba8',1,'sector_timing_example.ino']]],
+  ['trackconfig_20',['TrackConfig',['../structTrackConfig.html',1,'']]],
+  ['tritype_21',['TRITYPE',['../DovesLapTimer_8h.html#a4c71bce04011719c67a8d8473c2a97af',1,'DovesLapTimer.h']]],
+  ['try_20it_20yourself_20with_20real_20gps_20data_22',['Try it yourself with real GPS data',['../md_DETECTION.html#autotoc_md45',1,'']]],
+  ['two_20laps_20normal_20track_20praga_20dark_20with_20blown_20tillotson_20motor_23',['Two Laps, Normal Track, Praga Dark with blown tillotson motor',['../gps__race__data__praga__laps_8h.html#autotoc_md7',1,'']]],
+  ['two_20laps_20normal_20track_20white_20tony_20rental_24',['Two Laps, Normal Track, White Tony Rental',['../gps__race__data__2laps_8h.html#autotoc_md0',1,'']]]
+];

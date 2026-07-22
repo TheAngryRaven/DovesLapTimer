@@ -1,0 +1,11 @@
+<map id="src/DovesLapTimer.h" name="src/DovesLapTimer.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="52,5,211,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,127,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="123,33,88,70,84,67,119,29"/>
+<area shape="rect" id="Node000003" href="$GeoMath_8h.html" title=" " alt="" coords="151,79,245,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="144,29,180,67,176,70,140,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="119,152,187,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="193,106,170,142,165,139,188,103"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="211,152,273,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="208,103,230,139,225,142,203,106"/>
+</map>

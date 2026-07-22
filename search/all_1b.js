@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['waypoint_5flap_5fmin_5fdistance_5fmeters_0',['WAYPOINT_LAP_MIN_DISTANCE_METERS',['../DovesLapTimer_8h.html#a1a62f413f288c4b18fca23234bf3c022',1,'DovesLapTimer.h']]],
+  ['waypoint_5flap_5fproximity_5fmeters_1',['WAYPOINT_LAP_PROXIMITY_METERS',['../DovesLapTimer_8h.html#af308e4fec451f90527ccab918a0945ec',1,'DovesLapTimer.h']]],
+  ['waypointlaptimer_2',['waypointlaptimer',['../classWaypointLapTimer.html#a79595b789881e31bd68560d5d1ac876b',1,'WaypointLapTimer::WaypointLapTimer()'],['../classWaypointLapTimer.html',1,'WaypointLapTimer']]],
+  ['waypointlaptimer_20lap_20anything_3',['WaypointLapTimer (&quot;Lap Anything&quot;)',['../index.html#autotoc_md30',1,'']]],
+  ['waypointlaptimer_2ecpp_4',['WaypointLapTimer.cpp',['../WaypointLapTimer_8cpp.html',1,'']]],
+  ['waypointlaptimer_2eh_5',['WaypointLapTimer.h',['../WaypointLapTimer_8h.html',1,'']]],
+  ['weird_6',['How crossing detection works (and why it has to be weird)',['../md_DETECTION.html',1,'']]],
+  ['what_20s_20new_20in_20v4_200_7',['What&apos;s New in v4.0',['../index.html#autotoc_md13',1,'']]],
+  ['white_20tony_20rental_8',['white tony rental',['../gps__race__data__lap_8h.html#autotoc_md3',1,'One Lap, Normal Track, White Tony Rental'],['../gps__race__data__2laps_8h.html#autotoc_md0',1,'Two Laps, Normal Track, White Tony Rental']]],
+  ['why_20it_20broke_9',['The first attempt (and why it broke)',['../md_DETECTION.html#autotoc_md42',1,'']]],
+  ['why_20it_20has_20to_20be_20weird_10',['How crossing detection works (and why it has to be weird)',['../md_DETECTION.html',1,'']]],
+  ['with_20blown_20tillotson_20motor_11',['Two Laps, Normal Track, Praga Dark with blown tillotson motor',['../gps__race__data__praga__laps_8h.html#autotoc_md7',1,'']]],
+  ['with_20real_20gps_20data_12',['Try it yourself with real GPS data',['../md_DETECTION.html#autotoc_md45',1,'']]],
+  ['wlt_5fstate_5fdriving_13',['WLT_STATE_DRIVING',['../WaypointLapTimer_8h.html#a9688d00d27ad7146493c07c74fc406f8',1,'WaypointLapTimer.h']]],
+  ['wlt_5fstate_5fidle_14',['WLT_STATE_IDLE',['../WaypointLapTimer_8h.html#a4ed3bc57743f202d6dd905927e8a79fc',1,'WaypointLapTimer.h']]],
+  ['wlt_5fstate_5fin_5fproximity_15',['WLT_STATE_IN_PROXIMITY',['../WaypointLapTimer_8h.html#a1937433d5251545634d02d8d49c8dbf2',1,'WaypointLapTimer.h']]],
+  ['wlt_5fstate_5fwaiting_5fspeed_16',['WLT_STATE_WAITING_SPEED',['../WaypointLapTimer_8h.html#ac89ca19a0ec7cd183729d3d1f205fe7f',1,'WaypointLapTimer.h']]],
+  ['won_20currently_20deployed_17',['The solution that won (currently deployed)',['../md_DETECTION.html#autotoc_md43',1,'']]],
+  ['work_20yes_20—_20here_20s_20the_20proof_18',['Does it actually work? Yes — here&apos;s the proof',['../md_DETECTION.html#autotoc_md44',1,'']]],
+  ['works_19',['How Course Detection Works',['../index.html#autotoc_md31',1,'']]],
+  ['works_20and_20why_20it_20has_20to_20be_20weird_20',['How crossing detection works (and why it has to be weird)',['../md_DETECTION.html',1,'']]],
+  ['worsttimedifference_21',['worstTimeDifference',['../basic__oled__example_8ino.html#a687b3124d35dac357296926fab2fcaa6',1,'basic_oled_example.ino']]]
+];

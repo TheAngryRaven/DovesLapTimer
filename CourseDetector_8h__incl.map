@@ -1,0 +1,16 @@
+<map id="src/CourseDetector.h" name="src/CourseDetector.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="102,5,259,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,89,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,33,82,74,80,70,158,28"/>
+<area shape="rect" id="Node000003" href="$DovesLapTimer_8h.html" title=" " alt="" coords="113,79,248,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="183,31,183,65,178,65,178,31"/>
+<area shape="rect" id="Node000005" href="$GeoMath_8h.html" title=" " alt="" coords="239,152,333,177"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="204,29,234,49,262,77,277,108,285,138,280,139,272,110,257,80,230,53,201,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="93,152,215,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="179,105,166,140,161,138,174,103"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="199,102,259,142,256,147,196,106"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="208,225,276,251"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="281,179,259,215,254,212,276,176"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="300,225,363,251"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="296,176,319,212,314,215,291,179"/>
+</map>
