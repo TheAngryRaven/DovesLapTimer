@@ -88,4 +88,78 @@ static inline double geoHaversine3D(double prevLat, double prevLng, double prevA
   return sqrt(dist * dist + altDiff * altDiff);
 }
 
+/**
+ * @brief Determines which side of an (infinite) line a point is on.
+ *
+ * Cross-product sign test in degree space. Extracted from
+ * DovesLapTimer::pointOnSideOfLine so CrossingEngine and SprintTimer can
+ * share it without a timer instance; the member method delegates here.
+ *
+ * @return 1 / -1 for the two sides, 0 if exactly on the line
+ *         (matches CROSSING_LINE_SIDE_B / _A / _EXACT).
+ */
+static inline int geoPointOnSideOfLine(double driverLat, double driverLng, double pointALat, double pointALng, double pointBLat, double pointBLng) {
+  double lineDirectionX = pointBLat - pointALat;
+  double lineDirectionY = pointBLng - pointALng;
+  double driverToPointAX = driverLat - pointALat;
+  double driverToPointAY = driverLng - pointALng;
+
+  double crossProduct = lineDirectionX * driverToPointAY - lineDirectionY * driverToPointAX;
+
+  if (crossProduct > 0) {
+    return -1; // CROSSING_LINE_SIDE_A
+  } else if (crossProduct < 0) {
+    return 1;  // CROSSING_LINE_SIDE_B
+  }
+  return 0;    // CROSSING_LINE_SIDE_EXACT
+}
+
+/**
+ * @brief Shortest distance from a point to a line *segment*, in meters.
+ *
+ * Inputs are decimal-degree coordinates; the projection onto the segment
+ * happens in degree space, but every return path measures the final
+ * distance via haversine, so the result is in meters. Extracted from
+ * DovesLapTimer::pointLineSegmentDistance (which delegates here).
+ */
+static inline double geoPointLineSegmentDistance(double pointX, double pointY, double startX, double startY, double endX, double endY) {
+  double dx = endX - startX;
+  double dy = endY - startY;
+  double segmentLengthSquared = dx * dx + dy * dy;
+
+  // Epsilon comparison handles degenerate segments (start == end).
+  if (segmentLengthSquared < 1e-12) {
+    return geoHaversine(pointX, pointY, startX, startY);
+  }
+
+  double projectionScalar = ((pointX - startX) * dx + (pointY - startY) * dy) / segmentLengthSquared;
+
+  if (projectionScalar < 0.0) {
+    return geoHaversine(pointX, pointY, startX, startY);
+  } else if (projectionScalar > 1.0) {
+    return geoHaversine(pointX, pointY, endX, endY);
+  }
+
+  double projectedX = startX + projectionScalar * dx;
+  double projectedY = startY + projectionScalar * dy;
+  return geoHaversine(pointX, pointY, projectedX, projectedY);
+}
+
+/**
+ * @brief Hypotenuse-based crossing-zone membership test.
+ *
+ * Forms a right triangle from the line's width and thresholdMeters; the
+ * hypotenuse is the effective proximity bound measured from the driver to
+ * EACH line endpoint. See DETECTION.md for why this beats a plain
+ * distance-to-line check. Extracted from DovesLapTimer::insideLineThreshold
+ * (which delegates here with its configured threshold).
+ */
+static inline bool geoInsideLineThreshold(double thresholdMeters, double driverLat, double driverLon, double crossingPointALat, double crossingPointALon, double crossingPointBLat, double crossingPointBLon) {
+  double driverLengthA = geoHaversine(driverLat, driverLon, crossingPointALat, crossingPointALon);
+  double driverLengthB = geoHaversine(driverLat, driverLon, crossingPointBLat, crossingPointBLon);
+  double crossingLineLength = geoHaversine(crossingPointALat, crossingPointALon, crossingPointBLat, crossingPointBLon);
+  double maxLineLength = sqrt(thresholdMeters * thresholdMeters + crossingLineLength * crossingLineLength);
+  return driverLengthA < maxLineLength && driverLengthB < maxLineLength;
+}
+
 #endif

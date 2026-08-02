@@ -49,6 +49,21 @@ public:
   int loop(double lat, double lng, float altMeters, float speedKnots);
   void reset();
   void pruneInactiveCourses();
+  /**
+   * @brief Selects a course directly, bypassing CourseDetector entirely.
+   *
+   * For callers that already know which layout is in play (an app-side
+   * default course choice, or sprint mode's newest-course-by-date rule —
+   * point-to-point driving can never satisfy the detector's
+   * drive-a-lap-back-to-your-waypoint premise). Marks detection complete,
+   * deactivates every other course timer (same effect as detection +
+   * pruneInactiveCourses()), and clears any Lap Anything activation.
+   * reset() returns the manager to normal detection.
+   *
+   * @param index Course index [0, getCourseCount()).
+   * @return True if the index was valid and the course was selected.
+   */
+  bool selectCourse(int index);
 
   // Detection state
   bool isDetectionComplete() const;

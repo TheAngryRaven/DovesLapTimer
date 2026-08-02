@@ -161,3 +161,27 @@ GEOMATH_KNOTS_TO_KMH	LITERAL1
 GEOMATH_KMH_TO_MPH	LITERAL1
 GEOMATH_MPH_TO_KMH	LITERAL1
 GEOMATH_METERS_TO_FEET	LITERAL1
+
+#######################################
+# SprintTimer (point-to-point / sprint mode)
+#######################################
+SprintTimer	KEYWORD1
+CrossingEngine	KEYWORD1
+
+setStartLine	KEYWORD2
+setFinishLine	KEYWORD2
+isStartLineConfigured	KEYWORD2
+isFinishLineConfigured	KEYWORD2
+isRunActive	KEYWORD2
+getRuns	KEYWORD2
+getCancelledRunCount	KEYWORD2
+getCurrentRunTime	KEYWORD2
+getLastRunTime	KEYWORD2
+getBestRunTime	KEYWORD2
+getBestRunNumber	KEYWORD2
+getCurrentRunDistance	KEYWORD2
+getLastRunDistance	KEYWORD2
+getBestRunDistance	KEYWORD2
+selectCourse	KEYWORD2
+
+SPRINT_MAX_SPLITS	LITERAL1

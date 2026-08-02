@@ -55,8 +55,12 @@ course detection, direction detection, and waypoint-based fallback timing.
 DovesLapTimer/
 ├── src/
 │   ├── DovesLapTimer.h          # Header - class definition, structs, constants, DirectionDetector
-│   ├── DovesLapTimer.cpp        # Implementation - crossing detection, sector timing, direction
-│   ├── GeoMath.h                # Shared haversine/haversine3D (static inline, no .cpp needed)
+│   ├── DovesLapTimer.cpp        # Implementation - lap/sector accounting, direction (crossing math delegated to CrossingEngine)
+│   ├── CrossingEngine.h         # Reusable crossing core: buffer entry struct, LineDetectResult, timeSinceMidnightDelta, CROSSING_* constants
+│   ├── CrossingEngine.cpp       # Zone state machine + crossing interpolation (extracted verbatim from DovesLapTimer)
+│   ├── SprintTimer.h            # Point-to-point run timer ("sprint mode": autocross/hillclimb)
+│   ├── SprintTimer.cpp          # SprintTimer implementation (per-line engines, run accounting)
+│   ├── GeoMath.h                # Shared haversine/haversine3D + line geometry (side-of-line, segment distance, zone test)
 │   ├── WaypointLapTimer.h       # Single-point proximity-based lap timer ("Lap Anything")
 │   ├── WaypointLapTimer.cpp     # WaypointLapTimer implementation
 │   ├── CourseDetector.h         # Course detection state machine
@@ -71,6 +75,8 @@ DovesLapTimer/
 │   │   └── images.h             # Bitmap data for UI
 │   ├── sector_timing_example/   # Demonstrates 3-sector timing
 │   │   └── sector_timing_example.ino
+│   ├── sprint_timing_example/   # SprintTimer point-to-point demo (synthetic course, Serial only)
+│   │   └── sprint_timing_example.ino
 │   └── real_track_data_debug/   # Replays real NMEA data (no GPS needed)
 │       ├── real_track_data_debug.ino
 │       ├── gps_race_data_2laps.h
@@ -95,10 +101,14 @@ DovesLapTimer/
 ```
 CourseManager (orchestrator)
 ├── DovesLapTimer[MAX_COURSES]   # One per course layout, line-crossing detection
-│   └── DirectionDetector        # Inline struct, detects forward/reverse
+│   ├── DirectionDetector        # Inline struct, detects forward/reverse
+│   └── CrossingEngine (×1)      # Shared crossing buffer + interpolation (3 lines, mutual exclusion)
 ├── CourseDetector               # State machine: speed → waypoint → distance match
 ├── WaypointLapTimer             # Fallback "Lap Anything" proximity-based timer
-└── GeoMath.h                    # Shared static haversine functions
+└── GeoMath.h                    # Shared static haversine + line geometry functions
+
+SprintTimer (standalone, point-to-point — NOT managed by CourseManager)
+└── CrossingEngine (×4)          # Independent per-line buffers: start / finish / S2 / S3
 ```
 
 ### Core Class: `DovesLapTimer`
@@ -176,6 +186,49 @@ catches it inside a crossing zone; lap-level deltas do not.
   driver is still inside the proximity zone and the next GPS fix would
   re-trigger ranking, burning through `COURSE_DETECT_MAX_REJECTIONS` in a few
   frames and jumping straight to Lap Anything
+
+### CrossingEngine (extracted from DovesLapTimer)
+
+- The in-zone GPS ring buffer + zone state machine (`detect()`) + crossing
+  interpolation, extracted **verbatim** from `DovesLapTimer`'s old private
+  `_detectLineCrossing` / `interpolateCrossingPoint` — the Layer-3 NMEA
+  replay goldens pin the numeric behavior across the move (resolves the
+  long-standing `checkStartFinish` split-timing portability TODO).
+- Line coords + the per-line in-zone flag are passed per call, so an engine
+  can be shared across lines (DovesLapTimer: one engine, 3 lines, caller
+  enforces one-crossing-at-a-time) or dedicated per line (SprintTimer).
+- Owns `crossingPointBufferEntry`, `LineDetectResult`,
+  `timeSinceMidnightDelta()`, `DOVES_MILLIS_PER_DAY`, `CROSSING_*` — all
+  still visible through `DovesLapTimer.h`'s include for back-compat.
+- Line geometry (`geoPointOnSideOfLine`, `geoPointLineSegmentDistance`,
+  `geoInsideLineThreshold`) moved to `GeoMath.h`; DovesLapTimer's public
+  methods delegate unchanged.
+
+### SprintTimer (point-to-point / "sprint mode")
+
+- For autocross / hillclimb / rally-stage events: run = START line →
+  SEPARATE FINISH line, no laps. Up to `SPRINT_MAX_SPLITS` (2) optional
+  split lines; zero/one/two all legal (`areSectorLinesConfigured()` = any,
+  NOT the circuit both-or-nothing rule). Segments numbered in crossing
+  order; missed/out-of-order split invalidates the run's segment data
+  (best-segment table skips it) but never the run time.
+- **Two states, purely line-driven**: WAITING → start crossing begins a
+  run; RUNNING → finish completes it, and a START crossing CANCELS +
+  restarts (botched-course re-launch; `getCancelledRunCount()`); finish
+  while WAITING is ignored. DNF = run just never completes. No
+  DirectionDetector — backward start crossings self-heal via the restart
+  rule.
+- **All lines hot on every fix, independent per-line CrossingEngines** —
+  no mutual exclusion, start/finish zones may overlap (autocross paddocks).
+  Cost: ~11.6 KB/instance on 32-bit. Single instance intended; not for
+  small AVRs.
+- Same fix-intake pipeline as DovesLapTimer (validation, teleport
+  rejection, odometer). Duck-typed to the full DovesLapTimer getter
+  surface (laps == runs) + run-native aliases (`getRuns`,
+  `getBestRunTime`, `isRunActive`, ...). `getCurrentLapTime()` returns 0
+  while WAITING — the downstream "waiting" display signal.
+- Consumed by the DovesDataLogger firmware's sprint mode (see that repo's
+  `docs/plans/0002-sprint-mode.md` for the cross-repo design).
 
 ### WaypointLapTimer ("Lap Anything") (v4.0)
 - Fallback when no course is detected (after rejections / no-match passes / distance failsafe)
@@ -280,6 +333,20 @@ Same timing/state getters as DovesLapTimer. Sector getters return 0. Additional:
 | `getWaypointLat()` | Waypoint latitude |
 | `getWaypointLng()` | Waypoint longitude |
 
+### SprintTimer API (duck-typed to DovesLapTimer, laps == runs)
+Same loop contract (`updateCurrentTime()` + `loop()`) and the full DovesLapTimer getter surface. Additional:
+| Method | Returns |
+|--------|---------|
+| `setStartLine(aLat,aLng,bLat,bLng)` | Define the start line |
+| `setFinishLine(aLat,aLng,bLat,bLng)` | Define the separate finish line |
+| `setSector2Line` / `setSector3Line` | Optional splits (0/1/2 legal) |
+| `isStartLineConfigured()` / `isFinishLineConfigured()` | Line validity |
+| `isRunActive()` | True between start and finish crossing |
+| `getRuns()` / `getCancelledRunCount()` | Completed / cancelled runs |
+| `getCurrentRunTime()` | Elapsed ms, 0 while WAITING |
+| `getLastRunTime()` / `getBestRunTime()` / `getBestRunNumber()` | Run results |
+| `getCurrentRunDistance()` / `getLastRunDistance()` / `getBestRunDistance()` | Distances |
+
 ### CourseDetector API
 | Method | Returns |
 |--------|---------|
@@ -298,6 +365,7 @@ Same timing/state getters as DovesLapTimer. Sector getters return 0. Additional:
 | `updateCurrentTime(ms)` | Feed time to all timers |
 | `loop(lat, lng, alt, speedKnots)` | Feed GPS to all timers + detector |
 | `reset()` | Reset everything |
+| `selectCourse(index)` | Skip detection: activate course `index` directly (deactivates the rest); false on bad index |
 | `pruneInactiveCourses()` | Stop feeding non-detected timers (CPU only, frees no RAM) |
 | `isCourseTimerActive(index)` | True while that course's timer is still fed |
 | `isDetectionComplete()` | True if course detected or Lap Anything active |
@@ -369,7 +437,7 @@ struct TrackConfig {
    this contract enforced.
 2. **Altitude messing up distance**: `loop()` has a TODO: "I think alt is messing up, investigate more... maybe flag?"
 3. ~~**Early abort bug**~~: Abandoned — commented-out `crossingStartedLineSide` tracking plus the `CROSSING_LINE_SIDE_NONE` define have been removed; the underlying "abort early" optimization was never implemented and the current hypotenuse-threshold flow is reliable in practice.
-4. **`checkStartFinish` portability**: TODO at the top of `checkStartFinish` to make more portable for split timing
+4. ~~**`checkStartFinish` portability**~~: Resolved — the crossing pipeline was extracted into `CrossingEngine` (shared by DovesLapTimer and SprintTimer); `checkStartFinish` is now a thin accounting layer over `_detectLineCrossing`'s wrapper
 5. ~~**License mismatch**~~: Resolved - GPL v3, library.properties updated
 6. ~~**Header comment outdated**~~: Fixed - updated to mention 3-sector timing
 7. ~~**No keywords.txt**~~: Added (refreshed 2026-04-17 for full v4.0 API coverage)
@@ -477,7 +545,10 @@ README.md.
   host via `make run`. Covers `GeoMath`, `DirectionDetector`,
   `CourseDetector` state machine, `CourseManager` orchestration
   (`test_course_manager.cpp`), `WaypointLapTimer`
-  (`test_waypoint_lap_timer.cpp`), a synthetic-track integration
+  (`test_waypoint_lap_timer.cpp`), `SprintTimer` point-to-point runs over a
+  synthetic open course (`test_sprint_timer.cpp` — run times, cancel/restart,
+  ignored finishes, 0/1/2 splits, missed-split invalidation),
+  a synthetic-track integration
   pass over the full `DovesLapTimer` pipeline, plus regression suites for
   midnight rollover (`test_midnight_rollover.cpp`), adversarial GPS input
   (`test_input_validation.cpp`), crossing-buffer wraparound
@@ -492,7 +563,15 @@ README.md.
   golden values pinned in each fixture header to ±50ms, plus a ±200ms check
   against MyLaps magnetic-loop times where recorded. Catches interpolation
   regressions on real-world noisy GPS data, not just the clean synthetic track.
-  21 replay tests across 4 fixtures.
+  21 replay tests across 4 fixtures. Additionally `test_nmea_sprint.cpp` runs a
+  **differential replay**: the 2laps OKC fixture through BOTH the circuit timer
+  (full S/F+S2+S3, OKC "Normal" lines from the DovesDataLogger SDCARD JSON) and
+  a SprintTimer configured start=S/F, finish=S2 — every recorded lap becomes one
+  point-to-point run whose time must equal that lap's circuit sector-1 time to
+  ±10ms (two independent accounting layers over the same crossings must agree),
+  plus pinned run goldens. Real-data sprint coverage until a true autocross
+  fixture exists; note it can't exercise staging stops / cancel-restart (those
+  stay synthetic).
 
 ## Cross-Reference: Related Repos
 

@@ -23,6 +23,8 @@ LDFLAGS   =
 # Library sources we link into every test (small enough that always-link
 # costs nothing and we don't have to per-test bookkeep dependencies).
 LIB_SRCS = ../src/DovesLapTimer.cpp \
+           ../src/CrossingEngine.cpp \
+           ../src/SprintTimer.cpp \
            ../src/WaypointLapTimer.cpp \
            ../src/CourseDetector.cpp \
            ../src/CourseManager.cpp

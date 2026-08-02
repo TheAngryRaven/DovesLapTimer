@@ -205,6 +205,21 @@ void CourseManager::_activateLapAnything() {
   }
 }
 
+bool CourseManager::selectCourse(int index) {
+  if (index < 0 || index >= _courseCount) {
+    return false;
+  }
+  _activeCourseIndex = index;
+  _detectionComplete = true;
+  _lapAnythingActive = false;
+  for (int i = 0; i < _courseCount; i++) {
+    _courseTimers[i].active = (i == index);
+  }
+  debug(F("Course selected directly: "));
+  debugln(_courseTimers[index].name);
+  return true;
+}
+
 void CourseManager::pruneInactiveCourses() {
   if (!_detectionComplete || _activeCourseIndex < 0) return;
 
