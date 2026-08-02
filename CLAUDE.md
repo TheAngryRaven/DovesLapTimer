@@ -563,7 +563,15 @@ README.md.
   golden values pinned in each fixture header to ±50ms, plus a ±200ms check
   against MyLaps magnetic-loop times where recorded. Catches interpolation
   regressions on real-world noisy GPS data, not just the clean synthetic track.
-  21 replay tests across 4 fixtures.
+  21 replay tests across 4 fixtures. Additionally `test_nmea_sprint.cpp` runs a
+  **differential replay**: the 2laps OKC fixture through BOTH the circuit timer
+  (full S/F+S2+S3, OKC "Normal" lines from the DovesDataLogger SDCARD JSON) and
+  a SprintTimer configured start=S/F, finish=S2 — every recorded lap becomes one
+  point-to-point run whose time must equal that lap's circuit sector-1 time to
+  ±10ms (two independent accounting layers over the same crossings must agree),
+  plus pinned run goldens. Real-data sprint coverage until a true autocross
+  fixture exists; note it can't exercise staging stops / cancel-restart (those
+  stay synthetic).
 
 ## Cross-Reference: Related Repos
 

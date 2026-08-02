@@ -20,7 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run-native aliases (`getRuns()`, `getBestRunTime()`,
   `getCancelledRunCount()`, `isRunActive()`, ...). New example:
   `sprint_timing_example` (32-bit targets; per-line buffers don't fit
-  small AVRs). Host tests: `test/test_sprint_timer.cpp`.
+  small AVRs). Host tests: `test/test_sprint_timer.cpp` (synthetic
+  semantics) plus `test/test_nmea_sprint.cpp`, a real-data differential
+  replay — the OKC fixture driven through both the circuit timer and a
+  SprintTimer (start = S/F, finish = the real OKC sector-2 line), with
+  every run required to equal that lap's circuit sector-1 time.
 - **`CourseManager::selectCourse(int)`** — selects a course directly,
   bypassing `CourseDetector` entirely, for callers that already know the
   layout (an app-side default course, or sprint mode's
