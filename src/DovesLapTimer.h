@@ -489,6 +489,11 @@ public:
   bool isDirectionResolved() const;
 
 private:
+#ifdef DOVES_DISABLE_DEBUG
+  // Compile-time debug kill switch — see CrossingEngine.h for the rationale.
+  template<typename... Args> void debug_print(Args&&...) {}
+  template<typename... Args> void debug_println(Args&&...) {}
+#else
   template<typename... Args>
   void debug_print(Args&&... args) {
     if(_serial) {
@@ -501,6 +506,7 @@ private:
       _serial->println(std::forward<Args>(args)...);
     }
   }
+#endif
 
   /**
    * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.
