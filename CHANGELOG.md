@@ -6,6 +6,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`SprintTimer` — point-to-point run timing ("sprint mode")** for
+  autocross / hillclimb / rally-stage events: a run starts at a START line
+  and ends at a SEPARATE FINISH line, with up to two optional split lines
+  between them (zero, one, or two are all legal — no both-or-nothing sector
+  gate). Both lines are monitored on every fix with independent crossing
+  buffers, so start and finish zones may sit arbitrarily close together.
+  Run semantics: a start crossing begins a run; re-crossing the start
+  MID-RUN cancels and restarts it (botched-course re-launch); finish
+  crossings with no active run are ignored; a DNF simply never completes.
+  Duck-typed to `DovesLapTimer`'s getter surface (laps == runs) plus
+  run-native aliases (`getRuns()`, `getBestRunTime()`,
+  `getCancelledRunCount()`, `isRunActive()`, ...). New example:
+  `sprint_timing_example` (32-bit targets; per-line buffers don't fit
+  small AVRs). Host tests: `test/test_sprint_timer.cpp`.
+- **`CourseManager::selectCourse(int)`** — selects a course directly,
+  bypassing `CourseDetector` entirely, for callers that already know the
+  layout (an app-side default course, or sprint mode's
+  newest-course-by-date rule — point-to-point driving can never satisfy
+  the detector's drive-a-lap-back-to-your-waypoint premise). Marks
+  detection complete and deactivates the other course timers.
+
+### Changed
+- **Crossing detection extracted into `CrossingEngine`** (resolves the
+  long-standing `checkStartFinish` split-timing portability TODO): the
+  in-zone buffer, zone state machine, and crossing interpolation moved
+  verbatim from `DovesLapTimer` internals into a reusable class;
+  `DovesLapTimer` now delegates to one shared engine (behavior and memory
+  layout unchanged — the Layer-3 NMEA replay goldens pin this). Shared
+  line geometry (`geoPointOnSideOfLine`, `geoPointLineSegmentDistance`,
+  `geoInsideLineThreshold`) moved to `GeoMath.h`; the existing
+  `DovesLapTimer` public methods delegate and are unchanged.
+
 ## [4.2.0] – 2026-07-17
 
 A hardening release built on the v4.1 test harness. No breaking API changes;

@@ -431,6 +431,67 @@ The `WaypointLapTimer` is the fallback that kicks in when no pre-configured cour
   // Sector getters exist but return 0 (sectors not supported in proximity mode)
 ```
 
+### SprintTimer (point-to-point / "sprint mode")
+
+For autocross, hillclimbs, and rally-stage style events there are no laps: a
+run starts at a START line and ends at a **separate FINISH line**, with up to
+two optional split lines between them. `SprintTimer` handles exactly that.
+
+**Run semantics (deliberately simple):**
+
+1. Crossing the **start line** begins a run — including while a run is
+   already active: the in-progress run is **cancelled and a new one starts**
+   (you botched the course and drove back around to re-launch).
+2. Crossing the **finish line** completes the run. Finish crossings with no
+   active run are ignored, so driving back past the finish on the return
+   loop does nothing.
+3. A DNF is nothing special — an abandoned run never completes and records
+   nothing.
+
+Every line is watched on **every** GPS fix with its own independent crossing
+buffer (no shared-buffer mutual exclusion like the circuit timer), so the
+start and finish lines may sit arbitrarily close together — common in
+autocross paddocks.
+
+Splits are optional and flexible: zero, one, or two lines are all legal
+(unlike the circuit timer's both-or-nothing sector pair). Segments are
+numbered in crossing order; a missed or out-of-order split invalidates that
+run's segment data but never the run time itself.
+
+```c
+  SprintTimer sprintTimer(7.0);  // crossing threshold, like DovesLapTimer
+  sprintTimer.setStartLine(aLat, aLng, bLat, bLng);
+  sprintTimer.setFinishLine(aLat, aLng, bLat, bLng);
+  sprintTimer.setSector2Line(aLat, aLng, bLat, bLng);  // optional
+  sprintTimer.setSector3Line(aLat, aLng, bLat, bLng);  // optional
+
+  // Same loop contract as DovesLapTimer:
+  sprintTimer.updateCurrentTime(millisecondsSinceMidnight);
+  sprintTimer.loop(lat, lng, altitudeMeters, speedKnots);
+
+  // Run-native surface:
+  bool isRunActive() const;            // between start and finish
+  int getRuns() const;                 // completed runs this session
+  int getCancelledRunCount() const;    // re-crossed start mid-run
+  unsigned long getCurrentRunTime() const;  // 0 while waiting
+  unsigned long getLastRunTime() const;
+  unsigned long getBestRunTime() const;
+  int getBestRunNumber() const;
+
+  // Plus the full DovesLapTimer duck-typed getter surface (laps == runs),
+  // so displays/loggers can consume either timer interchangeably.
+```
+
+`SprintTimer` targets 32-bit MCUs — each configured line's independent
+buffer is ~2.9 KB, ~11.6 KB for a fully-configured instance. See
+`examples/sprint_timing_example` for a complete synthetic-course demo.
+
+If your caller already knows which course layout is in play (e.g. an
+app-selected course), `CourseManager::selectCourse(int index)` skips
+automatic detection entirely — useful for circuit timing too, and required
+for sprint courses, where detection's drive-a-lap-back-to-your-waypoint
+premise can never be satisfied.
+
 ### How Course Detection Works
 
 The `CourseDetector` is a state machine that runs inside `CourseManager`:
@@ -479,6 +540,12 @@ When sector lines are configured, the library automatically detects whether you'
   - Displays best sector times and optimal lap calculation
   - Tracks which lap achieved each best sector time
   - Serial output only (easy to integrate into existing projects)
+- [Sprint Timing Example](examples/sprint_timing_example/sprint_timing_example.ino)
+  - Point-to-point "sprint mode" (autocross / hillclimb): separate start
+    and finish lines, runs instead of laps
+  - Synthetic 500m course, no GPS hardware required, Serial output only
+  - Demonstrates run cancel/restart, ignored finish crossings, and
+    optional splits
 - [Real Track Data Debug](examples/real_track_data_debug/real_track_data_debug.ino)
   - **REQUIRES A LOT OF RAM TO STORE SAMPLE DATA**
   - **Serial Only** No GPS Required
@@ -492,6 +559,8 @@ When sector lines are configured, the library automatically detects whether you'
 A `CourseManager` instance is ~29 KB on a 64-bit-double MCU, dominated by a fixed by-value array of `MAX_COURSES` (8) course timers at ~3.6 KB each. That memory is **statically allocated for all 8 slots regardless of how many courses you configure**, and it is never released: `pruneInactiveCourses()` (and the automatic deactivation when "Lap Anything" activates) stop deactivated timers from being *processed* — saving CPU per GPS fix — but free zero bytes. `CourseManager` therefore does not fit on AVR-class boards (Mega: 8 KB SRAM); it needs an MCU like the XIAO nRF52840 (256 KB).
 
 If using `DovesLapTimer` standalone (no `CourseManager`), memory usage is much lower — a single timer instance is ~3.6 KB, mostly its crossing point buffer (100 entries on boards with >3KB RAM, 25 entries otherwise).
+
+A `SprintTimer` instance is ~11.6 KB on 32-bit targets: unlike `DovesLapTimer`'s shared buffer, every line (start, finish, and the two optional splits) owns an independent ~2.9 KB crossing buffer so all lines stay hot on every fix and zones may overlap. It is meant to be instantiated once — not pooled 8-wide like `CourseManager`'s timer array — and does not fit small AVRs.
 
 ## License
 
