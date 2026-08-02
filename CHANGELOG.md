@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`DOVES_DISABLE_DEBUG` compile-time debug kill switch.** The library's
+  debug output is gated by a runtime `if (_serial)` check, so production
+  firmwares that never attach a debug Stream still carried every debug
+  string and print call-site in flash (~150 call sites / several KB on a
+  build using all modules). Defining `DOVES_DISABLE_DEBUG` (e.g.
+  `-DDOVES_DISABLE_DEBUG`) swaps the debug templates for empty inlines so
+  the compiler drops it all. Default behavior is unchanged; CI runs the
+  host suite both ways.
 - **`SprintTimer` — point-to-point run timing ("sprint mode")** for
   autocross / hillclimb / rally-stage events: a run starts at a START line
   and ends at a SEPARATE FINISH line, with up to two optional split lines

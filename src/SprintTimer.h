@@ -186,6 +186,17 @@ public:
   bool isDirectionResolved() const { return false; }
 
 private:
+#ifdef DOVES_DISABLE_DEBUG
+  // Compile-time debug kill switch: the runtime _serial null-check still
+  // keeps every debug string and print call-site in flash on production
+  // builds that never attach a debug Stream. Defining DOVES_DISABLE_DEBUG
+  // (e.g. -DDOVES_DISABLE_DEBUG in build flags) replaces the debug
+  // templates with empty inlines so the compiler drops it all — several
+  // KB on a fully-featured firmware. Debug behavior is unchanged when
+  // the macro is not defined.
+  template<typename... Args> void debug_print(Args&&...) {}
+  template<typename... Args> void debug_println(Args&&...) {}
+#else
   template<typename... Args>
   void debug_print(Args&&... args) {
     if(_serial) { _serial->print(std::forward<Args>(args)...); }
@@ -194,6 +205,7 @@ private:
   void debug_println(Args&&... args) {
     if(_serial) { _serial->println(std::forward<Args>(args)...); }
   }
+#endif
 
   /** @brief Segments in a complete run: 1 + configured splits. */
   int _expectedSegments() const;

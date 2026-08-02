@@ -279,6 +279,15 @@ catches it inside a crossing zone; lap-level deltas do not.
 - Used by WaypointLapTimer and CourseDetector (no DovesLapTimer instance needed)
 - DovesLapTimer retains its own `haversine()`/`haversine3D()` methods for backward compat
 
+### DOVES_DISABLE_DEBUG (flash-size kill switch)
+
+All six classes' `debug_print`/`debug_println` templates compile to empty
+inlines when `DOVES_DISABLE_DEBUG` is defined, dropping every debug string
+and call-site from flash (production firmwares never attach a debug
+Stream; the runtime `if (_serial)` check kept it all resident — several
+KB). Off by default; the DovesDataLogger firmware workflows pass it. CI
+runs the host suite with and without the flag.
+
 ## Public API Quick Reference
 
 ### DovesLapTimer Setup Methods
