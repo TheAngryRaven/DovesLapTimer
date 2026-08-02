@@ -22,6 +22,10 @@
 #define _DOVES_CROSSING_ENGINE_H
 
 #include <Arduino.h>
+// Polyfills std::forward (used by the debug templates below) on cores with
+// no C++ standard library — classic AVR. Must come before any std:: use so
+// this header is safe to include in any order relative to DovesLapTimer.h.
+#include "ArxTypeTraits.h"
 #include "GeoMath.h"
 
 #define CROSSING_LINE_SIDE_A -1
