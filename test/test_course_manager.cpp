@@ -255,6 +255,80 @@ void test_prune_deactivates_non_detected_courses() {
 }
 
 // =============================================================================
+// selectCourse — direct selection, no detection (sprint mode / app default)
+// =============================================================================
+
+void test_select_course_bypasses_detection() {
+  TrackConfig cfg = {};
+  cfg.longName = "TwoLayouts";
+  cfg.shortName = "2L";
+  cfg.courseCount = 2;
+  cfg.courses[0] = matchingCourse("Layout A");
+  cfg.courses[1] = matchingCourse("Layout B");
+
+  CourseManager mgr(cfg);
+  EXPECT_FALSE(mgr.isDetectionComplete());
+
+  EXPECT_TRUE(mgr.selectCourse(1));
+  EXPECT_TRUE(mgr.isDetectionComplete());
+  EXPECT_FALSE(mgr.isLapAnythingActive());
+  EXPECT_EQ(mgr.getActiveCourseIndex(), 1);
+  EXPECT_TRUE(mgr.getActiveTimer() != NULL);
+  EXPECT_TRUE(strcmp(mgr.getActiveCourseName(), "Layout B") == 0);
+  // Only the selected course keeps being fed.
+  EXPECT_FALSE(mgr.isCourseTimerActive(0));
+  EXPECT_TRUE(mgr.isCourseTimerActive(1));
+}
+
+void test_select_course_rejects_bad_index() {
+  TrackConfig cfg = {};
+  cfg.longName = "One";
+  cfg.shortName = "1";
+  cfg.courseCount = 1;
+  cfg.courses[0] = matchingCourse("Only");
+
+  CourseManager mgr(cfg);
+  EXPECT_FALSE(mgr.selectCourse(-1));
+  EXPECT_FALSE(mgr.selectCourse(1));
+  EXPECT_FALSE(mgr.isDetectionComplete());
+  EXPECT_EQ(mgr.getActiveCourseIndex(), -1);
+}
+
+void test_selected_course_times_laps_without_detector() {
+  // The whole point: laps count from the very first crossing, with no
+  // drive-a-lap-back-to-the-waypoint detection pass ever happening.
+  TrackConfig cfg = {};
+  cfg.longName = "Synthetic";
+  cfg.shortName = "SYN";
+  cfg.courseCount = 1;
+  cfg.courses[0] = matchingCourse("Square 400m");
+
+  CourseManager mgr(cfg);
+  EXPECT_TRUE(mgr.selectCourse(0));
+  driveLaps(mgr, 3 * STEPS_PER_LAP + 30);
+
+  DovesLapTimer *timer = mgr.getActiveTimer();
+  EXPECT_TRUE(timer != NULL);
+  EXPECT_TRUE(timer->getLaps() >= 2);
+  EXPECT_NEAR(timer->getLastLapTime(), STEPS_PER_LAP * MS_PER_STEP, 100.0);
+  EXPECT_EQ(mgr.getDetectionRejectionCount(), 0);
+}
+
+void test_reset_clears_selected_course() {
+  TrackConfig cfg = {};
+  cfg.longName = "One";
+  cfg.shortName = "1";
+  cfg.courseCount = 1;
+  cfg.courses[0] = matchingCourse("Only");
+
+  CourseManager mgr(cfg);
+  EXPECT_TRUE(mgr.selectCourse(0));
+  mgr.reset();
+  EXPECT_FALSE(mgr.isDetectionComplete());
+  EXPECT_TRUE(mgr.getActiveTimer() == NULL);
+}
+
+// =============================================================================
 // reset
 // =============================================================================
 
@@ -293,6 +367,11 @@ int main() {
   RUN_TEST(lap_anything_deactivates_all_course_timers);
 
   RUN_TEST(prune_deactivates_non_detected_courses);
+
+  RUN_TEST(select_course_bypasses_detection);
+  RUN_TEST(select_course_rejects_bad_index);
+  RUN_TEST(selected_course_times_laps_without_detector);
+  RUN_TEST(reset_clears_selected_course);
 
   RUN_TEST(reset_restores_detection_state);
 
