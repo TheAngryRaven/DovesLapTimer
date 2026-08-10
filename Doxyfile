@@ -9,7 +9,7 @@
 
 # ----- Project metadata -----
 PROJECT_NAME           = "DovesLapTimer"
-PROJECT_NUMBER         = "4.0.0"
+PROJECT_NUMBER         = "4.3.0"
 PROJECT_BRIEF          = "GPS-based lap timing Arduino library — go-karts to race cars"
 OUTPUT_DIRECTORY       = docs-build
 OUTPUT_LANGUAGE        = English

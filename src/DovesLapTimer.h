@@ -11,6 +11,7 @@
 
 #include "ArxTypeTraits.h"
 #include "GeoMath.h"
+#include "CrossingEngine.h"
 using TRITYPE = double;
 
 // On classic AVR (Mega, Uno) `double` is a 32-bit float (~7 significant
@@ -25,9 +26,7 @@ using TRITYPE = double;
 #warning "DovesLapTimer: 'double' is only 32 bits on this target (classic AVR). Lap counting works but GPS math runs degraded - distances and interpolated crossing times will be noticeably less accurate. Use a 64-bit-double MCU (e.g. XIAO nRF52840) for full precision."
 #endif
 
-#define CROSSING_LINE_SIDE_A -1
-#define CROSSING_LINE_SIDE_EXACT 0
-#define CROSSING_LINE_SIDE_B 1
+// CROSSING_LINE_SIDE_* now live in CrossingEngine.h (included above).
 
 // Course detection constants
 #define COURSE_DETECT_SPEED_THRESHOLD_MPH  20
@@ -67,8 +66,9 @@ using TRITYPE = double;
 // Maximum courses supported
 #define MAX_COURSES  8
 
-// GPS time base: milliseconds since UTC midnight, wraps 86,399,999 -> 0
-#define DOVES_MILLIS_PER_DAY  86400000UL
+// DOVES_MILLIS_PER_DAY, timeSinceMidnightDelta(), CROSSING_MAX_FIX_GAP_MS,
+// CROSSING_PAIR_SPACING_FACTOR, LineDetectResult, and
+// crossingPointBufferEntry now live in CrossingEngine.h (included above).
 
 // GPS input validation: a single-fix jump beyond this is treated as a glitch
 // and dropped; after GPS_JUMP_REACCEPT_COUNT consecutive far fixes the new
@@ -76,50 +76,6 @@ using TRITYPE = double;
 // re-seeded without crediting the gap to the odometer.
 #define GPS_MAX_PLAUSIBLE_JUMP_METERS  500.0
 #define GPS_JUMP_REACCEPT_COUNT  3
-
-// Max believable gap between the two consecutive buffered fixes that straddle
-// a crossing line. A larger gap means the GPS time base stepped (e.g. u-blox
-// re-acquisition) and the pair cannot be interpolated coherently.
-#define CROSSING_MAX_FIX_GAP_MS  10000UL
-
-// The straddling pair's summed distance to the line is validated against
-// max(crossingThresholdMeters, factor * pair spacing) so that low-rate GPS
-// (widely spaced fixes) doesn't fail validation purely on sample density.
-#define CROSSING_PAIR_SPACING_FACTOR  1.25
-
-/**
- * @brief Elapsed milliseconds between two milliseconds-since-midnight timestamps.
- *
- * Normalizes across the UTC midnight wrap (86,399,999 -> 0), which happens
- * mid-evening across the Americas. Without this, a lap straddling midnight
- * underflows unsigned subtraction into a ~4.29-billion-ms "lap time".
- *
- * @param startMs Earlier timestamp, in ms since midnight.
- * @param endMs Later timestamp, in ms since midnight.
- * @return Elapsed time in ms, wrap-normalized.
- */
-static inline unsigned long timeSinceMidnightDelta(unsigned long startMs, unsigned long endMs) {
-  if (endMs < startMs) {
-    endMs += DOVES_MILLIS_PER_DAY;
-  }
-  return endMs - startMs;
-}
-
-// Outcome of a single _detectLineCrossing pass.
-enum LineDetectResult {
-  LINE_DETECT_NONE,         // not in / near the zone, or exited with an invalid interpolation
-  LINE_DETECT_IN_ZONE,      // inside the zone (entered this fix or continuing)
-  LINE_DETECT_COMPLETED,    // exited the zone this fix — interpolated outputs valid
-};
-
-
-struct crossingPointBufferEntry {
-  double lat; // latitude
-  double lng; // longitude
-  unsigned long time; // current time in milliseconds
-  float odometer; // time traveled since device start and this entry
-  float speedKmh; // speed in kmph
-};
 
 struct DirectionDetector {
   int direction;    // DIR_UNKNOWN, DIR_FORWARD, DIR_REVERSE
@@ -533,6 +489,11 @@ public:
   bool isDirectionResolved() const;
 
 private:
+#ifdef DOVES_DISABLE_DEBUG
+  // Compile-time debug kill switch — see CrossingEngine.h for the rationale.
+  template<typename... Args> void debug_print(Args&&...) {}
+  template<typename... Args> void debug_println(Args&&...) {}
+#else
   template<typename... Args>
   void debug_print(Args&&... args) {
     if(_serial) {
@@ -545,6 +506,7 @@ private:
       _serial->println(std::forward<Args>(args)...);
     }
   }
+#endif
 
   /**
    * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.
@@ -575,9 +537,9 @@ private:
    */
   bool checkSectorLine(double currentLat, double currentLng, double pointALat, double pointALng, double pointBLat, double pointBLng, bool& crossingFlag, int sectorNumber);
   /**
-   * @brief Shared crossing-zone state machine used by checkStartFinish and
-   * checkSectorLine. Detects entry, buffers GPS fixes inside the zone, and
-   * interpolates the exact crossing point on exit.
+   * @brief Thin wrapper over CrossingEngine::detect — supplies this timer's
+   * vehicle state (time, odometer, speed, previous-fix snapshot) so
+   * checkStartFinish and checkSectorLine keep their historical call shape.
    *
    * @param currentLat / currentLng Current GPS position.
    * @param pointALat / pointALng Line endpoint A.
@@ -608,56 +570,20 @@ private:
    * @brief Updates best sector times if current lap sector times are better.
    */
   void updateBestSectors();
-  /**
-   * @brief Catmull-Rom spline interpolation between two points
-   *
-   * @param p0 Value at point 0
-   * @param p1 Value at point 1
-   * @param p2 Value at point 2
-   * @param p3 Value at point 3
-   * @param t Interpolation parameter [0, 1]
-   * @return Interpolated value
-   */
-  double catmullRom(double p0, double p1, double p2, double p3, double t);
-  /**
-   * @brief Computes the interpolation weight based on distances and speeds.
-   * 
-   * @param distA Distance from point A to the line.
-   * @param distB Distance from point B to the line.
-   * @param speedA Speed (in km/h) at point A.
-   * @param speedB Speed (in km/h) at point B.
-   * @return Interpolation weight factor for point A.
-   */
-  double interpolateWeight(double distA, double distB, float speedA, float speedB);
-  /**
-   * @brief Calculates the crossing point's latitude, longitude, and time based on the buffer points and the line defined by two points.
-   *
-   * This function walks the buffered GPS points in chronological order (unwinding the
-   * circular buffer if it wrapped) and finds the first pair of consecutive points on
-   * opposite sides of the line defined by (pointALat, pointALng) and (pointBLat, pointBLng).
-   * It then interpolates the crossing point's latitude, longitude, and time using that pair.
-   *
-   * @param crossingLat Reference to the variable that will store the crossing point's latitude.
-   * @param crossingLng Reference to the variable that will store the crossing point's longitude.
-   * @param crossingTime Reference to the variable that will store the crossing point's time.
-   * @param crossingOdometer Reference to the variable that will store the crossing point's odometer.
-   * @param pointALat Latitude of the first point of the line in decimal degrees.
-   * @param pointALng Longitude of the first point of the line in decimal degrees.
-   * @param pointBLat Latitude of the second point of the line in decimal degrees.
-   * @param pointBLng Longitude of the second point of the line in decimal degrees.
-   * @return True if a valid crossing was found and the out-params are populated.
-   */
-  bool interpolateCrossingPoint(double& crossingLat, double& crossingLng, unsigned long& crossingTime, double& crossingOdometer, double pointALat, double pointALng, double pointBLat, double pointBLng);
 
   Stream *_serial;
   DirectionDetector _directionDetector;
+  // The shared crossing pipeline (buffer + interpolation). ONE engine for
+  // all three lines — the historical shared-buffer design, kept so the
+  // by-value CourseManager timer array doesn't triple in size. loop()
+  // enforces the resulting only-one-line-crossing-at-a-time exclusion.
+  CrossingEngine _crossingEngine;
 
   unsigned long millisecondsSinceMidnight = 0;
   // Timing variables
   double crossingThresholdMeters;
   bool raceStarted = false;
   bool crossing = false;
-  bool forceLinear = true;
   unsigned long currentLapStartTime = 0;
   unsigned long lastLapTime = 0;
   unsigned long bestLapTime = 0;
@@ -696,11 +622,7 @@ private:
   bool firstPositionReceived = false;  // Explicit flag for first GPS fix detection
 
   // Previous GPS fix snapshot (used as Catmull-Rom pre-crossing control point)
-  double prevFixLat = 0;
-  double prevFixLng = 0;
-  unsigned long prevFixTime = 0;
-  float prevFixOdometer = 0;
-  float prevFixSpeedKmh = 0;
+  crossingPointBufferEntry prevFix = {0, 0, 0, 0, 0};
   bool hasPrevFix = false;
 
   double startFinishPointALat = 0.0;
@@ -727,30 +649,6 @@ private:
 
   // Consecutive fixes rejected for jumping > GPS_MAX_PLAUSIBLE_JUMP_METERS
   int consecutiveJumpCount = 0;
-
-  // Zone exits whose crossing interpolation was rejected (see getter docs)
-  unsigned int rejectedCrossingCount = 0;
-
-  // Earth's radius in meters
-  static constexpr double radiusEarth = 6371.0 * 1000;
-
-  // Buffer sizing: AVR exposes RAMEND/RAMSTART so we can tell a Mega (8KB) from a Uno (2KB).
-  // On modern 32-bit cores (nRF52, ESP32, SAMD, RP2040, etc.) those macros are undefined
-  // and would silently evaluate to 0 - defaulting such targets to the small buffer would
-  // defeat the whole point of the hotfix. Assume anyone not on classic AVR has plenty of RAM.
-  #if defined(RAMEND) && defined(RAMSTART)
-    #if ((RAMEND - RAMSTART) > 3000)
-      static const int crossingPointBufferSize = 100;
-    #else
-      static const int crossingPointBufferSize = 25;
-    #endif
-  #else
-    static const int crossingPointBufferSize = 100;
-  #endif
-
-  crossingPointBufferEntry crossingPointBuffer[crossingPointBufferSize];
-  int crossingPointBufferIndex = 0;
-  bool crossingPointBufferFull = false;
 };
 
 #endif

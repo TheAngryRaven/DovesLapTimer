@@ -6,6 +6,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.3.0] – 2026-08-10
+
+A feature release: point-to-point "sprint mode" timing, a compile-time debug
+kill switch for production flash budgets, and the crossing-detection core
+extracted into a reusable engine. No breaking API changes; all existing
+`DovesLapTimer`/`CourseManager` behavior is pinned by the NMEA replay goldens.
+
+### Added
+- **`DOVES_DISABLE_DEBUG` compile-time debug kill switch.** The library's
+  debug output is gated by a runtime `if (_serial)` check, so production
+  firmwares that never attach a debug Stream still carried every debug
+  string and print call-site in flash (~150 call sites / several KB on a
+  build using all modules). Defining `DOVES_DISABLE_DEBUG` (e.g.
+  `-DDOVES_DISABLE_DEBUG`) swaps the debug templates for empty inlines so
+  the compiler drops it all. Default behavior is unchanged; CI runs the
+  host suite both ways.
+- **`SprintTimer` — point-to-point run timing ("sprint mode")** for
+  autocross / hillclimb / rally-stage events: a run starts at a START line
+  and ends at a SEPARATE FINISH line, with up to two optional split lines
+  between them (zero, one, or two are all legal — no both-or-nothing sector
+  gate). Both lines are monitored on every fix with independent crossing
+  buffers, so start and finish zones may sit arbitrarily close together.
+  Run semantics: a start crossing begins a run; re-crossing the start
+  MID-RUN cancels and restarts it (botched-course re-launch); finish
+  crossings with no active run are ignored; a DNF simply never completes.
+  Duck-typed to `DovesLapTimer`'s getter surface (laps == runs) plus
+  run-native aliases (`getRuns()`, `getBestRunTime()`,
+  `getCancelledRunCount()`, `isRunActive()`, ...). New example:
+  `sprint_timing_example` (32-bit targets; per-line buffers don't fit
+  small AVRs). Host tests: `test/test_sprint_timer.cpp` (synthetic
+  semantics) plus `test/test_nmea_sprint.cpp`, a real-data differential
+  replay — the OKC fixture driven through both the circuit timer and a
+  SprintTimer (start = S/F, finish = the real OKC sector-2 line), with
+  every run required to equal that lap's circuit sector-1 time.
+- **`CourseManager::selectCourse(int)`** — selects a course directly,
+  bypassing `CourseDetector` entirely, for callers that already know the
+  layout (an app-side default course, or sprint mode's
+  newest-course-by-date rule — point-to-point driving can never satisfy
+  the detector's drive-a-lap-back-to-your-waypoint premise). Marks
+  detection complete and deactivates the other course timers.
+
+### Changed
+- **Crossing detection extracted into `CrossingEngine`** (resolves the
+  long-standing `checkStartFinish` split-timing portability TODO): the
+  in-zone buffer, zone state machine, and crossing interpolation moved
+  verbatim from `DovesLapTimer` internals into a reusable class;
+  `DovesLapTimer` now delegates to one shared engine (behavior and memory
+  layout unchanged — the Layer-3 NMEA replay goldens pin this). Shared
+  line geometry (`geoPointOnSideOfLine`, `geoPointLineSegmentDistance`,
+  `geoInsideLineThreshold`) moved to `GeoMath.h`; the existing
+  `DovesLapTimer` public methods delegate and are unchanged.
+
 ## [4.2.0] – 2026-07-17
 
 A hardening release built on the v4.1 test harness. No breaking API changes;
@@ -279,6 +331,7 @@ actually matters.
 For pre-4.0 history (initial sector timing, Catmull-Rom interpolation
 work, etc.) see the git log directly.
 
+[4.3.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.3.0
 [4.2.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.2.0
 [4.1.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.1.0
 [4.0.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.0.0
