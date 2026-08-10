@@ -1,0 +1,28 @@
+var gps__config_8h =
+[
+    [ "BalancedPower", "gps__config_8h.html#a7abd5bfc753a463aad7a1f8147254eb3", null ],
+    [ "ENABLE_GPS_GLONASS", "gps__config_8h.html#a3a341fbd88ad61021083779998269490", null ],
+    [ "ENABLE_GPS_ONLY", "gps__config_8h.html#a47064889c332ba69118b1b71dac2f60d", null ],
+    [ "ENABLE_GPS_ONLY_M10", "gps__config_8h.html#acde6acfcbd9541fef51a32911476bfce", null ],
+    [ "ENABLE_GPS_SBAS_GAL", "gps__config_8h.html#ab3d4e931560d4bb05d04d0365d6cb5dd", null ],
+    [ "ENABLE_SBAS", "gps__config_8h.html#a90b96bdc5f274386f1289ccdbe9ee751", null ],
+    [ "FullPower", "gps__config_8h.html#a7c4402a741161b0192a85b4bfe856f1b", null ],
+    [ "GPGGAOff", "gps__config_8h.html#aa040909ca262a2c1e6bea879d5c627f2", null ],
+    [ "GPGGAOn10", "gps__config_8h.html#a67bd24a3ba271681cb9cb47794a80e34", null ],
+    [ "GPGGAOn5", "gps__config_8h.html#ab45d76e1531c06d3c846b46e1c1625d7", null ],
+    [ "GPGLLOff", "gps__config_8h.html#ace6bc7e3b3b90a61960de7686de74cb9", null ],
+    [ "GPGSAOff", "gps__config_8h.html#ad62e65181bd24c9b33ace14928128d25", null ],
+    [ "GPGSVOff", "gps__config_8h.html#ad413cef05053df725ebe18aeed0db1e1", null ],
+    [ "GPVTGOff", "gps__config_8h.html#a9fa4b989c2ae6ab4b23283a6262a327d", null ],
+    [ "Navrate10hz", "gps__config_8h.html#a4ce4b08bfae0b26dc80791962f886f33", null ],
+    [ "Navrate18hz", "gps__config_8h.html#a724034545968e533dc54d9d8efef9b05", null ],
+    [ "Navrate20hz", "gps__config_8h.html#a90b73468e9bb37575eefb5c8cea0921a", null ],
+    [ "Navrate25hz", "gps__config_8h.html#a56ff3ab53b0850010de85ca710da26e4", null ],
+    [ "Navrate5hz", "gps__config_8h.html#a148d7f2f2b422ec662aefc861197f661", null ],
+    [ "NavTypeAutomobile", "gps__config_8h.html#afb902b5b0d01af0aee679f7f5344cc2e", null ],
+    [ "NMEAVersion23", "gps__config_8h.html#aae8d94df45af9438fe71e2b1d999d886", null ],
+    [ "uart115200", "gps__config_8h.html#ab8a01b446ef52eb3433d228f25f987f2", null ],
+    [ "uart115200NmeaOnly", "gps__config_8h.html#a3de5fc980f795bce09432d2b5e063615", null ],
+    [ "uart19200", "gps__config_8h.html#a808b77e3edb96079b8565fa3ff7ebbf0", null ],
+    [ "uart19200nmeaOnly", "gps__config_8h.html#ae955930ea35cd89537f4cdd5452960bc", null ]
+];

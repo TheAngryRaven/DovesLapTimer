@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['selectcourse_0',['selectCourse',['../classCourseManager.html#a969d14d3ad558b5f714135d7c2aff9c4',1,'CourseManager']]],
+  ['setdebugserial_1',['setDebugSerial',['../classCrossingEngine.html#a38e0f0343d360b9df6f92304a0af8a33',1,'CrossingEngine']]],
+  ['setdetectionproximitymeters_2',['setdetectionproximitymeters',['../classCourseDetector.html#a6504733e905b7c7396e73f503975dd2f',1,'CourseDetector::setDetectionProximityMeters()'],['../classCourseManager.html#a36751abc56b70d22234d71aac3a0c2e6',1,'CourseManager::setDetectionProximityMeters()']]],
+  ['setfinishline_3',['setFinishLine',['../classSprintTimer.html#a4c3b08ac1a124bcad69f295f446e0b91',1,'SprintTimer']]],
+  ['setforcelinear_4',['setForceLinear',['../classCrossingEngine.html#a69b0a08c1663be4d6ce2540828a047bb',1,'CrossingEngine']]],
+  ['setproximitymeters_5',['setProximityMeters',['../classWaypointLapTimer.html#aca90ad46ee55cefb1b3b2458dd70c3a5',1,'WaypointLapTimer']]],
+  ['setsector2line_6',['setsector2line',['../classDovesLapTimer.html#a6d7f106f0b6d4c2ae0fb2eb8989c2271',1,'DovesLapTimer::setSector2Line()'],['../classSprintTimer.html#a6db331927d8782dd99944aadc68ce481',1,'SprintTimer::setSector2Line()']]],
+  ['setsector3line_7',['setsector3line',['../classDovesLapTimer.html#a9185c3ff0071a6e3a44648b97eb8bd5b',1,'DovesLapTimer::setSector3Line()'],['../classSprintTimer.html#abad94ef6d80fa9f80ad68c984852d37d',1,'SprintTimer::setSector3Line()']]],
+  ['setspeedthresholdmph_8',['setspeedthresholdmph',['../classCourseManager.html#a0d8f6cb00bf8a6163d73723f8afa5ecf',1,'CourseManager::setSpeedThresholdMph()'],['../classWaypointLapTimer.html#a46ffd8e38ccf8bbf2137d91eea376cca',1,'WaypointLapTimer::setSpeedThresholdMph()'],['../classCourseDetector.html#a5715e11bfc6bc6c5826b8ed79477b5d4',1,'CourseDetector::setSpeedThresholdMph()']]],
+  ['setstartfinishline_9',['setStartFinishLine',['../classDovesLapTimer.html#abc035ff4174d96d210956fec38da7eb9',1,'DovesLapTimer']]],
+  ['setstartline_10',['setStartLine',['../classSprintTimer.html#a204da1577362a502d7cd4b18a96d8b94',1,'SprintTimer']]],
+  ['setthreshold_11',['setThreshold',['../classCrossingEngine.html#a0cbcf493900d83c450d808764f9aa37a',1,'CrossingEngine']]],
+  ['setup_12',['setup',['../basic__oled__example_8ino.html#a4fc01d736fe50cf5b977f755b675f11d',1,'setup():&#160;basic_oled_example.ino'],['../real__track__data__debug_8ino.html#a4fc01d736fe50cf5b977f755b675f11d',1,'setup():&#160;real_track_data_debug.ino'],['../sector__timing__example_8ino.html#a4fc01d736fe50cf5b977f755b675f11d',1,'setup():&#160;sector_timing_example.ino'],['../sprint__timing__example_8ino.html#a4fc01d736fe50cf5b977f755b675f11d',1,'setup():&#160;sprint_timing_example.ino']]],
+  ['setwaypointproximitymeters_13',['setWaypointProximityMeters',['../classCourseManager.html#a810338ff7c1ea4b98832e44e3a0bcb36',1,'CourseManager']]],
+  ['sprintlineisvalid_14',['sprintLineIsValid',['../SprintTimer_8cpp.html#aaa923225eec1ed0909107338c7f55b6f',1,'SprintTimer.cpp']]],
+  ['sprinttimer_15',['SprintTimer',['../classSprintTimer.html#aa8202fd518bf2f1fbb9d2c80830002f8',1,'SprintTimer']]]
+];

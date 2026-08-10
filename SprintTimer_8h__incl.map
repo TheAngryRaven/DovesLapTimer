@@ -1,0 +1,22 @@
+<map id="src/SprintTimer.h" name="src/SprintTimer.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="36,5,168,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,225,89,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="92,33,75,53,60,80,51,114,47,150,47,212,42,212,42,150,46,113,56,78,71,50,88,29"/>
+<area shape="rect" id="Node000003" href="$GeoMath_8h.html" title=" " alt="" coords="135,225,229,251"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="101,31,95,59,91,96,93,137,104,176,122,199,146,216,142,221,118,203,100,179,87,138,86,96,90,58,96,30"/>
+<area shape="rect" id="Node000006" href="$CrossingEngine_8h.html" title=" " alt="" coords="115,152,249,177"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="111,30,171,139,167,141,106,32"/>
+<area shape="rect" id="Node000008" href="$DovesLapTimer_8h.html" title=" " alt="" coords="205,79,340,104"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="130,28,233,71,231,76,128,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="104,299,172,324"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="177,252,155,288,150,286,172,250"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="196,299,259,324"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="192,250,215,286,210,289,187,252"/>
+<area shape="poly" id="edge6_Node000006_Node000002" title=" " alt="" coords="162,180,83,221,80,216,159,175"/>
+<area shape="poly" id="edge8_Node000006_Node000003" title=" " alt="" coords="185,178,185,212,179,212,179,178"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="265,225,387,251"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="206,175,291,217,289,221,204,180"/>
+<area shape="poly" id="edge11_Node000008_Node000003" title=" " alt="" coords="276,105,275,139,271,159,263,179,243,202,219,220,216,216,239,199,258,176,266,158,270,138,271,104"/>
+<area shape="poly" id="edge12_Node000008_Node000006" title=" " alt="" coords="260,106,209,145,206,141,256,102"/>
+<area shape="poly" id="edge10_Node000008_Node000007" title=" " alt="" coords="283,103,308,151,325,211,319,212,304,153,278,105"/>
+</map>

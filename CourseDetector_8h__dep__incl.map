@@ -1,0 +1,9 @@
+<map id="src/CourseDetector.h" name="src/CourseDetector.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="107,5,265,31"/>
+<area shape="rect" id="Node000002" href="$CourseDetector_8cpp.html" title=" " alt="" coords="5,79,177,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="161,41,108,81,105,76,158,37"/>
+<area shape="rect" id="Node000003" href="$CourseManager_8h.html" title=" " alt="" coords="201,79,360,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,37,267,76,264,81,211,41"/>
+<area shape="rect" id="Node000004" href="$CourseManager_8cpp.html" title=" " alt="" coords="194,152,367,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="283,118,283,152,278,152,278,118"/>
+</map>

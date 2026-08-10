@@ -1,0 +1,5 @@
+<map id="TrackConfig" name="TrackConfig">
+<area shape="rect" id="Node000001" title=" " alt="" coords="8,333,117,439"/>
+<area shape="rect" id="Node000002" href="$structCourseConfig.html" title=" " alt="" coords="5,5,120,271"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="65,271,65,317,60,317,60,271"/>
+</map>

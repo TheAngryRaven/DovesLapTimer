@@ -1,0 +1,23 @@
+<map id="src/CourseDetector.cpp" name="src/CourseDetector.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="116,5,288,31"/>
+<area shape="rect" id="Node000002" href="$CourseDetector_8h.html" title=" " alt="" coords="135,79,269,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,31,205,65,199,65,199,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,299,89,324"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="183,106,153,126,124,154,101,187,82,223,57,286,52,284,77,221,96,184,120,150,150,122,180,102"/>
+<area shape="rect" id="Node000004" href="$DovesLapTimer_8h.html" title=" " alt="" coords="135,152,269,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="205,104,205,138,199,138,199,104"/>
+<area shape="rect" id="Node000006" href="$GeoMath_8h.html" title=" " alt="" coords="261,299,354,324"/>
+<area shape="poly" id="edge12_Node000002_Node000006" title=" " alt="" coords="225,102,255,122,283,150,300,184,309,220,312,256,312,285,307,285,307,256,304,221,295,186,279,154,251,126,222,106"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="115,299,236,324"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="177,180,148,199,135,212,124,226,121,243,126,259,151,288,147,291,122,261,116,243,120,224,130,208,144,195,174,175"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="226,175,255,195,283,224,298,254,306,285,301,286,293,256,278,227,252,200,223,180"/>
+<area shape="rect" id="Node000009" href="$CrossingEngine_8h.html" title=" " alt="" coords="135,225,269,251"/>
+<area shape="poly" id="edge8_Node000004_Node000009" title=" " alt="" coords="205,178,205,212,199,212,199,178"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="229,372,297,397"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="302,326,280,362,275,359,298,323"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="321,372,384,397"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="317,323,340,359,336,362,313,326"/>
+<area shape="poly" id="edge9_Node000009_Node000003" title=" " alt="" coords="178,253,86,295,84,290,176,248"/>
+<area shape="poly" id="edge10_Node000009_Node000005" title=" " alt="" coords="200,252,187,287,182,285,195,250"/>
+<area shape="poly" id="edge11_Node000009_Node000006" title=" " alt="" coords="220,248,280,289,278,293,217,253"/>
+</map>

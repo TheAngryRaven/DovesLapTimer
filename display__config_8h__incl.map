@@ -1,0 +1,7 @@
+<map id="examples/basic_oled_example/display_config.h" name="examples/basic_oled_example/display_config.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="45,5,240,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,93,125,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="126,47,88,85,84,82,122,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="149,93,293,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="164,44,202,82,198,85,160,47"/>
+</map>

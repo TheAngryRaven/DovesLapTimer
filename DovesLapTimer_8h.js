@@ -1,0 +1,28 @@
+var DovesLapTimer_8h =
+[
+    [ "DirectionDetector", "structDirectionDetector.html", "structDirectionDetector" ],
+    [ "DovesLapTimer", "classDovesLapTimer.html", "classDovesLapTimer" ],
+    [ "COURSE_DETECT_DISTANCE_TOLERANCE_PCT", "DovesLapTimer_8h.html#a9420c4018996fecd537ab606f194c59e", null ],
+    [ "COURSE_DETECT_FALLBACK_DISTANCE_FACTOR", "DovesLapTimer_8h.html#a57a041bb5d3d966043f39bf4028e53f4", null ],
+    [ "COURSE_DETECT_FALLBACK_MIN_METERS", "DovesLapTimer_8h.html#a960af452f2163dc519ecb4b61f48d530", null ],
+    [ "COURSE_DETECT_MAX_NO_MATCH_PASSES", "DovesLapTimer_8h.html#a754191b0db125fd567e90a20598d5136", null ],
+    [ "COURSE_DETECT_MAX_REJECTIONS", "DovesLapTimer_8h.html#ae7f3ddcdc9b016d7801225ba44891472", null ],
+    [ "COURSE_DETECT_MIN_DISTANCE_METERS", "DovesLapTimer_8h.html#aa3f26647c71feaa78ac038eb8d558f16", null ],
+    [ "COURSE_DETECT_SPEED_THRESHOLD_MPH", "DovesLapTimer_8h.html#af9eb4e66ffc66b8f3891d0fd44353c78", null ],
+    [ "COURSE_DETECT_WAYPOINT_PROXIMITY_METERS", "DovesLapTimer_8h.html#ab63eee6ecc03c06d03552b141c862395", null ],
+    [ "DETECT_STATE_CANDIDATES_READY", "DovesLapTimer_8h.html#a42778f6429c81f65935016113bf7fe73", null ],
+    [ "DETECT_STATE_DETECTED", "DovesLapTimer_8h.html#ae71b3f19a1eb0e6a80c6ae98fe7b46bf", null ],
+    [ "DETECT_STATE_IDLE", "DovesLapTimer_8h.html#af3882edadddf6e39081f7cdf4d9f3bd7", null ],
+    [ "DETECT_STATE_WAITING_FOR_SPEED", "DovesLapTimer_8h.html#a360928315086ee5dd169bb099cd253fb", null ],
+    [ "DETECT_STATE_WAYPOINT_SET", "DovesLapTimer_8h.html#af034d8898f42f178984df5ad82adaf6f", null ],
+    [ "DIR_FORWARD", "DovesLapTimer_8h.html#a83380d429899d5ec9db6523004a67096", null ],
+    [ "DIR_REVERSE", "DovesLapTimer_8h.html#a55e9b2387f32b90322e5d913b7c5bc4d", null ],
+    [ "DIR_UNKNOWN", "DovesLapTimer_8h.html#a94fefad3ffa4e91e607e506a7cf00044", null ],
+    [ "GPS_JUMP_REACCEPT_COUNT", "DovesLapTimer_8h.html#a537256ffa6643a9dde21f60c81e26f50", null ],
+    [ "GPS_MAX_PLAUSIBLE_JUMP_METERS", "DovesLapTimer_8h.html#a73930afbe9d332d7053dceb7462d4d1a", null ],
+    [ "MAX_COURSES", "DovesLapTimer_8h.html#ace2dcaacbf139556a010ee3c32ba3387", null ],
+    [ "METERS_TO_FEET", "DovesLapTimer_8h.html#a6bab041a0e56392db78c0dc4f8fa72a8", null ],
+    [ "WAYPOINT_LAP_MIN_DISTANCE_METERS", "DovesLapTimer_8h.html#a1a62f413f288c4b18fca23234bf3c022", null ],
+    [ "WAYPOINT_LAP_PROXIMITY_METERS", "DovesLapTimer_8h.html#af308e4fec451f90527ccab918a0945ec", null ],
+    [ "TRITYPE", "DovesLapTimer_8h.html#a4c71bce04011719c67a8d8473c2a97af", null ]
+];
