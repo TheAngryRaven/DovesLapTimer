@@ -51,6 +51,7 @@
 #define _DOVES_SPRINT_TIMER_H
 
 #include <Arduino.h>
+#include "DovesDebug.h"
 #include "GeoMath.h"
 #include "CrossingEngine.h"
 #include "DovesLapTimer.h"  // DIR_UNKNOWN, GPS_* validation constants
@@ -70,8 +71,9 @@ public:
    * @param currentLng Longitude in decimal degrees.
    * @param currentAltitudeMeters Altitude in meters.
    * @param currentSpeedKnots Speed in knots.
-   * @return 0 if near any configured line this fix, -1 otherwise (or the
-   *   fix was rejected as invalid).
+   * @return 0 while inside any configured line's crossing zone this fix,
+   *   -1 otherwise (or the fix was rejected as invalid) — the same values
+   *   DovesLapTimer::loop() returns, including -1 on the zone-exit fix.
    */
   int loop(double currentLat, double currentLng, float currentAltitudeMeters, float currentSpeedKnots);
   /**
@@ -143,6 +145,21 @@ public:
   /** @brief True while inside any configured line's crossing zone. */
   bool getCrossing() const;
   int getLaps() const { return getRuns(); }
+  /**
+   * @brief Start time (ms since midnight) of the current/most recent run —
+   * the duck-typed equivalent of DovesLapTimer::getCurrentLapStartTime().
+   */
+  unsigned long getCurrentLapStartTime() const { return _currentRunStartTime; }
+  /**
+   * @brief Odometer reading (meters) at the current/most recent run's start.
+   */
+  float getCurrentLapOdometerStart() const { return (float)_currentRunOdometerStart; }
+  /**
+   * @brief True when the timer is fully operable — duck-typed equivalent of
+   * DovesLapTimer::isStartFinishLineConfigured(): sprint needs BOTH the
+   * start and the (separate) finish line.
+   */
+  bool isStartFinishLineConfigured() const { return _startLineConfigured && _finishLineConfigured; }
   unsigned long getCurrentLapTime() const { return getCurrentRunTime(); }
   unsigned long getLastLapTime() const { return getLastRunTime(); }
   unsigned long getBestLapTime() const { return getBestRunTime(); }
@@ -186,26 +203,9 @@ public:
   bool isDirectionResolved() const { return false; }
 
 private:
-#ifdef DOVES_DISABLE_DEBUG
-  // Compile-time debug kill switch: the runtime _serial null-check still
-  // keeps every debug string and print call-site in flash on production
-  // builds that never attach a debug Stream. Defining DOVES_DISABLE_DEBUG
-  // (e.g. -DDOVES_DISABLE_DEBUG in build flags) replaces the debug
-  // templates with empty inlines so the compiler drops it all — several
-  // KB on a fully-featured firmware. Debug behavior is unchanged when
-  // the macro is not defined.
-  template<typename... Args> void debug_print(Args&&...) {}
-  template<typename... Args> void debug_println(Args&&...) {}
-#else
-  template<typename... Args>
-  void debug_print(Args&&... args) {
-    if(_serial) { _serial->print(std::forward<Args>(args)...); }
-  }
-  template<typename... Args>
-  void debug_println(Args&&... args) {
-    if(_serial) { _serial->println(std::forward<Args>(args)...); }
-  }
-#endif
+  // Shared debug members — see DovesDebug.h for the DOVES_DISABLE_DEBUG
+  // kill-switch rationale.
+  DOVES_DEBUG_TEMPLATES()
 
   /** @brief Segments in a complete run: 1 + configured splits. */
   int _expectedSegments() const;
@@ -217,7 +217,6 @@ private:
   void _updateBestSegments();
 
   Stream *_serial;
-  double _crossingThresholdMeters;
 
   // One engine per line: independent buffers, so zones may overlap and all
   // lines stay hot on every fix. This is the deliberate opposite of

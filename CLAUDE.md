@@ -61,6 +61,7 @@ DovesLapTimer/
 │   ├── SprintTimer.h            # Point-to-point run timer ("sprint mode": autocross/hillclimb)
 │   ├── SprintTimer.cpp          # SprintTimer implementation (per-line engines, run accounting)
 │   ├── GeoMath.h                # Shared haversine/haversine3D + line geometry (side-of-line, segment distance, zone test)
+│   ├── DovesDebug.h             # Shared DOVES_DEBUG_TEMPLATES() debug members + DOVES_DISABLE_DEBUG kill switch
 │   ├── WaypointLapTimer.h       # Single-point proximity-based lap timer ("Lap Anything")
 │   ├── WaypointLapTimer.cpp     # WaypointLapTimer implementation
 │   ├── CourseDetector.h         # Course detection state machine
@@ -220,6 +221,9 @@ catches it inside a crossing zone; lap-level deltas do not.
   rule.
 - **All lines hot on every fix, independent per-line CrossingEngines** —
   no mutual exclusion, start/finish zones may overlap (autocross paddocks).
+  Completions landing on the SAME fix dispatch ordered by their interpolated
+  crossing timestamps (wrap-aware; ties: splits, then finish, then start) so
+  a split exiting together with the finish still books onto its run.
   Cost: ~11.6 KB/instance on 32-bit. Single instance intended; not for
   small AVRs.
 - Same fix-intake pipeline as DovesLapTimer (validation, teleport
@@ -281,8 +285,10 @@ catches it inside a crossing zone; lap-level deltas do not.
 
 ### DOVES_DISABLE_DEBUG (flash-size kill switch)
 
-All six classes' `debug_print`/`debug_println` templates compile to empty
-inlines when `DOVES_DISABLE_DEBUG` is defined, dropping every debug string
+The five debug-printing classes' `debug_print`/`debug_println` templates
+(shared via `DovesDebug.h`'s `DOVES_DEBUG_TEMPLATES()` macro — CourseDetector
+has no debug output) compile to empty inlines when `DOVES_DISABLE_DEBUG` is
+defined, dropping every debug string
 and call-site from flash (production firmwares never attach a debug
 Stream; the runtime `if (_serial)` check kept it all resident — several
 KB). Off by default; the DovesDataLogger firmware workflows pass it. CI
@@ -494,8 +500,8 @@ GitHub Actions workflows live in `.github/workflows/`:
     pushing it", so we only claim the core library compiles on AVR Mega)
   - `arduino:avr:uno` — `sector_timing_example` only (smoke test on small AVR; the other two
     require `Serial1` which the Uno lacks)
-  - `esp32:esp32:esp32` — all 3 examples (custom platform URL pulls the ESP32 BSP)
-  - `Seeeduino:nrf52:xiaonRF52840Sense` — all 3 examples (recommended hardware; uses the
+  - `esp32:esp32:esp32` — all 4 examples (custom platform URL pulls the ESP32 BSP)
+  - `Seeeduino:nrf52:xiaonRF52840Sense` — all 4 examples (recommended hardware; uses the
     Adafruit-based nrf52 core, not the older mbed core, since that's what real XIAO
     users compile against and it matches the FPU/double-precision pitch in the README)
   - Pulled libs: ArxTypeTraits, Adafruit GPS Library, Adafruit GFX, Adafruit SSD1306,

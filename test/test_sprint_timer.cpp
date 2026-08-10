@@ -383,6 +383,73 @@ void test_duck_typed_surface_matches_run_surface() {
   EXPECT_EQ(t.getBestLapNumber(), t.getBestRunNumber());
   EXPECT_EQ(t.getDirection(), DIR_UNKNOWN);
   EXPECT_FALSE(t.isDirectionResolved());
+  // Duck-typed equivalents of the circuit timer's remaining getters.
+  EXPECT_TRUE(t.isStartFinishLineConfigured());  // both lines set above
+  EXPECT_TRUE(t.getCurrentLapStartTime() > 0);   // last run's start time
+  EXPECT_TRUE(t.getCurrentLapOdometerStart() > 0);
+}
+
+void test_same_fix_split_and_finish_dispatch_in_crossing_order() {
+  // Overlapping zones near the finish (explicitly supported): with a 7 m
+  // threshold, a line's in-crossing window spans ~±8 m along the course, so
+  // S2 at x=437 and the finish at x=444 keep BOTH engines in-crossing at
+  // x=440..445. One 20 m fix from 445 to 465 then exits both zones on the
+  // SAME loop() pass. The split's interpolated crossing (437 m) precedes
+  // the finish's (444 m) and must be dispatched first — the old fixed
+  // finish-first order closed the run before its final split landed,
+  // wrongly invalidating the run's segment data.
+  SprintTimer t(7.0);
+  setLine(t, &SprintTimer::setStartLine, START_X);
+  setLine(t, &SprintTimer::setFinishLine, 444.0);
+  setLine(t, &SprintTimer::setSector2Line, 437.0);
+  PathDriver d(t);
+
+  d.driveTo(445, 0);        // 5 m steps, ends with both engines in-crossing
+  EXPECT_TRUE(t.isRunActive());
+  EXPECT_TRUE(t.getCrossing());
+  d.x = 465;
+  d.feed();                 // single 20 m fix: exits both zones together
+
+  EXPECT_EQ(t.getRuns(), 1);
+  EXPECT_FALSE(t.isRunActive());
+  // Run start(50) -> finish(444): 394 m at 25 m/s = 15760 ms.
+  EXPECT_NEAR(t.getLastRunTime(), 15760UL, 100.0);
+  // Segment data survived: start->S2 = 387 m = 15480 ms, S2->finish = 7 m
+  // = 280 ms. Pre-fix both best segments were 0 (order flagged invalid).
+  EXPECT_NEAR(t.getBestSector1Time(), 15480UL, 100.0);
+  EXPECT_NEAR(t.getBestSector2Time(), 280UL, 100.0);
+  EXPECT_NEAR(t.getOptimalLapTime(), t.getBestRunTime(), 5.0);
+}
+
+void test_loop_return_matches_circuit_contract() {
+  // DovesLapTimer::loop() returns 0 only while INSIDE a crossing zone; the
+  // zone-exit fix (the one whose crossing completes) returns -1. SprintTimer
+  // must match — displays keying "freeze while crossing" off loop()==0 see
+  // identical behavior on either timer. Zone reality with a 7 m threshold:
+  // enter at perpendicular distance < 7 m, exit at > 8 m, so with 5 m steps
+  // the in-zone fixes for the start line at x=50 are 45/50/55 and x=60 is
+  // the exit fix.
+  SprintTimer t(7.0);
+  setLine(t, &SprintTimer::setStartLine, START_X);
+  setLine(t, &SprintTimer::setFinishLine, FINISH_X);
+
+  unsigned long simTime = 0;
+  for (double x = 5; x <= 120; x += 5) {
+    t.updateCurrentTime(simTime);
+    int ret = t.loop(latAt(0), lngAt(x), SIM_ALT_METERS, SIM_SPEED_KNOTS);
+    simTime += MS_PER_STEP;
+
+    if (x >= 45 && x <= 55) {
+      EXPECT_EQ(ret, 0);   // inside the start-line zone
+    } else if (x == 60) {
+      // Zone-exit fix: the crossing completes here, and the circuit timer
+      // returns -1 on this fix (0 is IN_ZONE only) — SprintTimer must too.
+      EXPECT_EQ(ret, -1);
+      EXPECT_TRUE(t.isRunActive());  // the completion still dispatched
+    } else {
+      EXPECT_EQ(ret, -1);  // clear of the zone
+    }
+  }
 }
 
 int main() {
@@ -403,6 +470,8 @@ int main() {
   RUN_TEST(reset_clears_state_keeps_lines);
   RUN_TEST(degenerate_lines_rejected);
   RUN_TEST(duck_typed_surface_matches_run_surface);
+  RUN_TEST(same_fix_split_and_finish_dispatch_in_crossing_order);
+  RUN_TEST(loop_return_matches_circuit_contract);
 
   TEST_SUMMARY();
 }

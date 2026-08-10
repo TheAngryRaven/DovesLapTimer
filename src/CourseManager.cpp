@@ -209,6 +209,15 @@ bool CourseManager::selectCourse(int index) {
   if (index < 0 || index >= _courseCount) {
     return false;
   }
+  // A timer that was deactivated (Lap Anything fallback, pruning, or an
+  // earlier selectCourse) stopped being fed mid-session: it still holds a
+  // frozen raceStarted/currentLapStartTime/position snapshot, and resuming
+  // it as-is would close a bogus multi-minute "lap" (and credit up to a
+  // teleport-threshold's worth of never-driven odometer) at its next
+  // crossing. Reset it before re-activating; configured lines are kept.
+  if (!_courseTimers[index].active) {
+    _courseTimers[index].timer.reset();
+  }
   _activeCourseIndex = index;
   _detectionComplete = true;
   _lapAnythingActive = false;

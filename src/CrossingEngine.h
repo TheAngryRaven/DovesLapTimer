@@ -22,10 +22,10 @@
 #define _DOVES_CROSSING_ENGINE_H
 
 #include <Arduino.h>
-// Polyfills std::forward (used by the debug templates below) on cores with
-// no C++ standard library — classic AVR. Must come before any std:: use so
-// this header is safe to include in any order relative to DovesLapTimer.h.
-#include "ArxTypeTraits.h"
+// DovesDebug.h pulls in the ArxTypeTraits std::forward polyfill before any
+// std:: use, so this header is safe to include in any order relative to
+// DovesLapTimer.h.
+#include "DovesDebug.h"
 #include "GeoMath.h"
 
 #define CROSSING_LINE_SIDE_A -1
@@ -149,26 +149,9 @@ public:
       double& outOdometer);
 
 private:
-#ifdef DOVES_DISABLE_DEBUG
-  // Compile-time debug kill switch: the runtime _serial null-check still
-  // keeps every debug string and print call-site in flash on production
-  // builds that never attach a debug Stream. Defining DOVES_DISABLE_DEBUG
-  // (e.g. -DDOVES_DISABLE_DEBUG in build flags) replaces the debug
-  // templates with empty inlines so the compiler drops it all — several
-  // KB on a fully-featured firmware. Debug behavior is unchanged when
-  // the macro is not defined.
-  template<typename... Args> void debug_print(Args&&...) {}
-  template<typename... Args> void debug_println(Args&&...) {}
-#else
-  template<typename... Args>
-  void debug_print(Args&&... args) {
-    if(_serial) { _serial->print(std::forward<Args>(args)...); }
-  }
-  template<typename... Args>
-  void debug_println(Args&&... args) {
-    if(_serial) { _serial->println(std::forward<Args>(args)...); }
-  }
-#endif
+  // Shared debug members — see DovesDebug.h for the DOVES_DISABLE_DEBUG
+  // kill-switch rationale.
+  DOVES_DEBUG_TEMPLATES()
 
   /**
    * @brief Finds the straddling fix pair in the buffer and interpolates the

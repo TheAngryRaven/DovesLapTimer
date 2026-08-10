@@ -18,6 +18,11 @@ CXX      ?= g++
 # files. Without this, library sources that use F() / Stream / memset without
 # an explicit include fail to compile on the host.
 CXXFLAGS  = -std=c++14 -Wall -Wextra -O0 -g -Imock -I../src -include mock/Arduino.h
+# Extra flags appended by callers without replacing the base flags — CI's
+# kill-switch pass uses `make run EXTRA_CXXFLAGS=-DDOVES_DISABLE_DEBUG` so
+# the base flags above stay the single source of truth.
+EXTRA_CXXFLAGS ?=
+CXXFLAGS += $(EXTRA_CXXFLAGS)
 LDFLAGS   =
 
 # Library sources we link into every test (small enough that always-link

@@ -10,6 +10,7 @@
 #define _DOVES_LAP_TIMER_H
 
 #include "ArxTypeTraits.h"
+#include "DovesDebug.h"
 #include "GeoMath.h"
 #include "CrossingEngine.h"
 using TRITYPE = double;
@@ -489,24 +490,9 @@ public:
   bool isDirectionResolved() const;
 
 private:
-#ifdef DOVES_DISABLE_DEBUG
-  // Compile-time debug kill switch — see CrossingEngine.h for the rationale.
-  template<typename... Args> void debug_print(Args&&...) {}
-  template<typename... Args> void debug_println(Args&&...) {}
-#else
-  template<typename... Args>
-  void debug_print(Args&&... args) {
-    if(_serial) {
-      _serial->print(std::forward<Args>(args)...);
-    }
-  }
-  template<typename... Args>
-  void debug_println(Args&&... args) {
-    if(_serial) {
-      _serial->println(std::forward<Args>(args)...);
-    }
-  }
-#endif
+  // Shared debug members — see DovesDebug.h for the DOVES_DISABLE_DEBUG
+  // kill-switch rationale.
+  DOVES_DEBUG_TEMPLATES()
 
   /**
    * @brief Checks if the kart is crossing the start/finish line and calculates lap time and crossing point.

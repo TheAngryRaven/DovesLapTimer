@@ -27,5 +27,5 @@ jobs:
         working-directory: test
         run: |
           make clean
-          make run CXXFLAGS="-std=c++14 -Wall -Wextra -O0 -g -Imock -I../src -include mock/Arduino.h -DDOVES_DISABLE_DEBUG"
+          make run EXTRA_CXXFLAGS=-DDOVES_DISABLE_DEBUG
 

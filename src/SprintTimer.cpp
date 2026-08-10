@@ -7,16 +7,32 @@
 #define debugln debug_println
 #define debug debug_print
 
-// Line labels for CrossingEngine debug output.
-#define SPRINT_LINE_START   0
-#define SPRINT_LINE_FINISH  1
+// Line labels for CrossingEngine debug output and completion dispatch.
+#define SPRINT_LINE_START    0
+#define SPRINT_LINE_FINISH   1
+#define SPRINT_LINE_SECTOR2  2
+#define SPRINT_LINE_SECTOR3  3
+
+// A completed crossing awaiting dispatch on this fix.
+struct PendingCrossing {
+  int line;            // SPRINT_LINE_*
+  unsigned long time;  // interpolated crossing time (ms since midnight)
+  double odometer;     // interpolated odometer at the crossing
+};
+
+// Wrap-aware "a physically precedes b": the forward distance a→b around the
+// midnight ring is shorter than the way back. Equal times compare false so
+// the insertion sort stays stable (tie priority = collection order).
+static bool _crossingTimeIsBefore(unsigned long a, unsigned long b) {
+  unsigned long forward = timeSinceMidnightDelta(a, b);
+  return forward != 0 && forward < DOVES_MILLIS_PER_DAY - forward;
+}
 
 SprintTimer::SprintTimer(double crossingThresholdMeters, Stream *debugSerial)
   : _startEngine(crossingThresholdMeters, debugSerial),
     _finishEngine(crossingThresholdMeters, debugSerial),
     _sector2Engine(crossingThresholdMeters, debugSerial),
     _sector3Engine(crossingThresholdMeters, debugSerial) {
-  _crossingThresholdMeters = crossingThresholdMeters;
   _serial = (debugSerial == NULL) ? nullptr : debugSerial;
 }
 
@@ -59,10 +75,13 @@ int SprintTimer::loop(double currentLat, double currentLng, float currentAltitud
   _currentSpeedKmh = currentSpeedKnots * GEOMATH_KNOTS_TO_KMH;
 
   // Every configured line is checked on EVERY fix — independent engines,
-  // no mutual exclusion (see header). Detect first, then handle results in
-  // a fixed order: finish before start, so that when both lines complete
-  // on the same fix (overlapping zones) the active run is completed by the
-  // finish before the start crossing opens the next one.
+  // no mutual exclusion (see header). Detect first, then dispatch completed
+  // crossings ordered by their interpolated crossing timestamps: with
+  // overlapping zones at a low fix rate, two lines can complete on the SAME
+  // fix (e.g. a split zone and the finish zone exited together), and only
+  // the timestamps carry the physical crossing order. Ties dispatch splits
+  // first, then finish, then start, so a split lands on the run it belongs
+  // to before the finish closes it (or a start restart replaces it).
   const crossingPointBufferEntry *prev = _hasPrevFix ? &_prevFix : NULL;
   bool nearAnyLine = false;
 
@@ -74,7 +93,7 @@ int SprintTimer::loop(double currentLat, double currentLng, float currentAltitud
         currentLat, currentLng, _millisecondsSinceMidnight, _totalDistanceTraveled, _currentSpeedKmh, prev,
         _finishALat, _finishALng, _finishBLat, _finishBLng,
         _crossingFinish, SPRINT_LINE_FINISH, finLat, finLng, finTime, finOdo);
-    if (finishEv != LINE_DETECT_NONE) nearAnyLine = true;
+    if (finishEv == LINE_DETECT_IN_ZONE) nearAnyLine = true;
   }
 
   double stLat = 0, stLng = 0, stOdo = 0;
@@ -85,7 +104,7 @@ int SprintTimer::loop(double currentLat, double currentLng, float currentAltitud
         currentLat, currentLng, _millisecondsSinceMidnight, _totalDistanceTraveled, _currentSpeedKmh, prev,
         _startALat, _startALng, _startBLat, _startBLng,
         _crossingStart, SPRINT_LINE_START, stLat, stLng, stTime, stOdo);
-    if (startEv != LINE_DETECT_NONE) nearAnyLine = true;
+    if (startEv == LINE_DETECT_IN_ZONE) nearAnyLine = true;
   }
 
   double s2Lat = 0, s2Lng = 0, s2Odo = 0;
@@ -95,8 +114,8 @@ int SprintTimer::loop(double currentLat, double currentLng, float currentAltitud
     s2Ev = _sector2Engine.detect(
         currentLat, currentLng, _millisecondsSinceMidnight, _totalDistanceTraveled, _currentSpeedKmh, prev,
         _sector2ALat, _sector2ALng, _sector2BLat, _sector2BLng,
-        _crossingSector2, 2, s2Lat, s2Lng, s2Time, s2Odo);
-    if (s2Ev != LINE_DETECT_NONE) nearAnyLine = true;
+        _crossingSector2, SPRINT_LINE_SECTOR2, s2Lat, s2Lng, s2Time, s2Odo);
+    if (s2Ev == LINE_DETECT_IN_ZONE) nearAnyLine = true;
   }
 
   double s3Lat = 0, s3Lng = 0, s3Odo = 0;
@@ -106,21 +125,51 @@ int SprintTimer::loop(double currentLat, double currentLng, float currentAltitud
     s3Ev = _sector3Engine.detect(
         currentLat, currentLng, _millisecondsSinceMidnight, _totalDistanceTraveled, _currentSpeedKmh, prev,
         _sector3ALat, _sector3ALng, _sector3BLat, _sector3BLng,
-        _crossingSector3, 3, s3Lat, s3Lng, s3Time, s3Odo);
-    if (s3Ev != LINE_DETECT_NONE) nearAnyLine = true;
+        _crossingSector3, SPRINT_LINE_SECTOR3, s3Lat, s3Lng, s3Time, s3Odo);
+    if (s3Ev == LINE_DETECT_IN_ZONE) nearAnyLine = true;
   }
 
-  if (finishEv == LINE_DETECT_COMPLETED) {
-    _handleFinishCrossing(finTime, finOdo);
-  }
-  if (startEv == LINE_DETECT_COMPLETED) {
-    _handleStartCrossing(stTime, stOdo);
-  }
+  // Collect completed crossings in tie-priority order (splits, finish,
+  // start), then stable-sort by wrap-aware crossing time so simultaneous
+  // completions dispatch in physical order.
+  PendingCrossing pending[4];
+  int pendingCount = 0;
   if (s2Ev == LINE_DETECT_COMPLETED) {
-    _handleSplitCrossing(2, s2Time);
+    pending[pendingCount++] = {SPRINT_LINE_SECTOR2, s2Time, s2Odo};
   }
   if (s3Ev == LINE_DETECT_COMPLETED) {
-    _handleSplitCrossing(3, s3Time);
+    pending[pendingCount++] = {SPRINT_LINE_SECTOR3, s3Time, s3Odo};
+  }
+  if (finishEv == LINE_DETECT_COMPLETED) {
+    pending[pendingCount++] = {SPRINT_LINE_FINISH, finTime, finOdo};
+  }
+  if (startEv == LINE_DETECT_COMPLETED) {
+    pending[pendingCount++] = {SPRINT_LINE_START, stTime, stOdo};
+  }
+  for (int i = 1; i < pendingCount; i++) {
+    PendingCrossing key = pending[i];
+    int j = i - 1;
+    while (j >= 0 && _crossingTimeIsBefore(key.time, pending[j].time)) {
+      pending[j + 1] = pending[j];
+      j--;
+    }
+    pending[j + 1] = key;
+  }
+  for (int i = 0; i < pendingCount; i++) {
+    switch (pending[i].line) {
+      case SPRINT_LINE_START:
+        _handleStartCrossing(pending[i].time, pending[i].odometer);
+        break;
+      case SPRINT_LINE_FINISH:
+        _handleFinishCrossing(pending[i].time, pending[i].odometer);
+        break;
+      case SPRINT_LINE_SECTOR2:
+        _handleSplitCrossing(2, pending[i].time);
+        break;
+      case SPRINT_LINE_SECTOR3:
+        _handleSplitCrossing(3, pending[i].time);
+        break;
+    }
   }
 
   // Save current fix as previous for the engines' Catmull-Rom pre-crossing point

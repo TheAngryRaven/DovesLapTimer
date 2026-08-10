@@ -47,7 +47,49 @@ extracted into a reusable engine. No breaking API changes; all existing
   the detector's drive-a-lap-back-to-your-waypoint premise). Marks
   detection complete and deactivates the other course timers.
 
+### Fixed
+- **`SprintTimer`: same-fix crossing completions now dispatch in physical
+  order.** With overlapping zones at a low fix rate, a split line and the
+  finish line can complete on the same GPS fix; the old fixed dispatch
+  order (finish first) closed the run before its final split was booked,
+  wrongly invalidating the run's segment data — and a split completing
+  together with a cancel-restart start crossing could be booked against
+  the new run with a wrapped near-day-length segment time. Completions are
+  now dispatched ordered by their interpolated crossing timestamps
+  (wrap-aware; ties: splits, then finish, then start). Regression test:
+  `test_sprint_timer.cpp::same_fix_split_and_finish_dispatch_in_crossing_order`.
+- **`CourseManager::selectCourse()` resets a previously-deactivated timer
+  before re-activating it.** A timer frozen by the Lap Anything fallback
+  (or pruning) kept a stale `raceStarted`/lap-start/position snapshot;
+  selecting it later closed a bogus multi-minute "lap", permanently
+  poisoned `bestLapTime` if it was that layout's first completed lap, and
+  credited never-driven distance to the odometer. Regression test:
+  `test_course_manager.cpp::select_course_after_fallback_resets_stale_timer`.
+- **`SprintTimer::loop()` return value now matches
+  `DovesLapTimer::loop()`**: 0 only while *inside* a crossing zone; the
+  zone-exit fix returns -1 (it previously returned 0, breaking displays
+  that key "crossing in progress" off the return value when swapping
+  timers). Regression test:
+  `test_sprint_timer.cpp::loop_return_matches_circuit_contract`.
+- **`SprintTimer` duck-typed getter surface completed**: added the missing
+  `getCurrentLapStartTime()`, `getCurrentLapOdometerStart()`, and
+  `isStartFinishLineConfigured()` (true when both the start and finish
+  lines are set), making the "full DovesLapTimer getter surface" claim
+  actually true for template/generic consumers.
+- **CI kill-switch pass no longer duplicates the test Makefile's flags**:
+  `test/Makefile` gained `EXTRA_CXXFLAGS` (appended to `CXXFLAGS`), and
+  `unit-tests.yml` passes `EXTRA_CXXFLAGS=-DDOVES_DISABLE_DEBUG` instead of
+  overriding `CXXFLAGS` with a hardcoded copy that would silently drift.
+
 ### Changed
+- **Debug templates deduplicated into `DovesDebug.h`.** The five
+  debug-printing classes now expand a shared `DOVES_DEBUG_TEMPLATES()`
+  macro instead of carrying five copy-pasted `DOVES_DISABLE_DEBUG` blocks
+  that had to be edited in lockstep. No behavior change; the flag works
+  exactly as before.
+- **Removed `SprintTimer`'s dead `_crossingThresholdMeters` member** (the
+  per-line engines own their thresholds; the member was written once and
+  never read).
 - **Crossing detection extracted into `CrossingEngine`** (resolves the
   long-standing `checkStartFinish` split-timing portability TODO): the
   in-zone buffer, zone state machine, and crossing interpolation moved

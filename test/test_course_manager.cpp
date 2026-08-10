@@ -314,6 +314,40 @@ void test_selected_course_times_laps_without_detector() {
   EXPECT_EQ(mgr.getDetectionRejectionCount(), 0);
 }
 
+void test_select_course_after_fallback_resets_stale_timer() {
+  // The Lap Anything fallback deactivates (freezes) every course timer
+  // mid-session. A later selectCourse() must not resume the frozen
+  // snapshot: pre-fix, the stale raceStarted/currentLapStartTime closed a
+  // bogus lap at the timer's next crossing and poisoned bestLapTime, and
+  // the stale position credited never-driven distance to the odometer.
+  TrackConfig cfg = {};
+  cfg.longName = "WrongLength";
+  cfg.shortName = "WLN";
+  cfg.courseCount = 1;
+  cfg.courses[0] = matchingCourse("Frozen Course");
+  cfg.courses[0].lengthFt = 10000.0f;  // never matches -> Lap Anything
+
+  CourseManager mgr(cfg);
+  driveLaps(mgr, 5 * STEPS_PER_LAP);  // S/F crossed every lap, then frozen
+  EXPECT_TRUE(mgr.isLapAnythingActive());
+  EXPECT_FALSE(mgr.isCourseTimerActive(0));
+
+  // Driver picks the layout from the app much later.
+  EXPECT_TRUE(mgr.selectCourse(0));
+  DovesLapTimer *timer = mgr.getActiveTimer();
+  EXPECT_TRUE(timer != NULL);
+  EXPECT_FALSE(timer->getRaceStarted());  // frozen session state cleared
+  EXPECT_EQ(timer->getLaps(), 0);
+  EXPECT_EQ(timer->getBestLapTime(), 0UL);
+  EXPECT_TRUE(timer->isStartFinishLineConfigured());  // lines survive reset
+
+  // And it times clean laps from scratch.
+  driveLaps(mgr, 2 * STEPS_PER_LAP + 30);
+  EXPECT_TRUE(timer->getLaps() >= 1);
+  EXPECT_NEAR(timer->getLastLapTime(), STEPS_PER_LAP * MS_PER_STEP, 100.0);
+  EXPECT_NEAR(timer->getBestLapTime(), STEPS_PER_LAP * MS_PER_STEP, 100.0);
+}
+
 void test_reset_clears_selected_course() {
   TrackConfig cfg = {};
   cfg.longName = "One";
@@ -371,6 +405,7 @@ int main() {
   RUN_TEST(select_course_bypasses_detection);
   RUN_TEST(select_course_rejects_bad_index);
   RUN_TEST(selected_course_times_laps_without_detector);
+  RUN_TEST(select_course_after_fallback_resets_stale_timer);
   RUN_TEST(reset_clears_selected_course);
 
   RUN_TEST(reset_restores_detection_state);
