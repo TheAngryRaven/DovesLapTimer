@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.3.0] – 2026-08-10
+
+A feature release: point-to-point "sprint mode" timing, a compile-time debug
+kill switch for production flash budgets, and the crossing-detection core
+extracted into a reusable engine. No breaking API changes; all existing
+`DovesLapTimer`/`CourseManager` behavior is pinned by the NMEA replay goldens.
+
 ### Added
 - **`DOVES_DISABLE_DEBUG` compile-time debug kill switch.** The library's
   debug output is gated by a runtime `if (_serial)` check, so production
@@ -324,6 +331,7 @@ actually matters.
 For pre-4.0 history (initial sector timing, Catmull-Rom interpolation
 work, etc.) see the git log directly.
 
+[4.3.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.3.0
 [4.2.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.2.0
 [4.1.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.1.0
 [4.0.0]: https://github.com/TheAngryRaven/DovesLapTimer/releases/tag/v4.0.0
